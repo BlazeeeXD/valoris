@@ -51,5 +51,25 @@ namespace Valoris.Core.Tests.Learning
 
             Assert.NotEqual(first, second);
         }
+
+        [Fact]
+        public void DifferentPositionsWithIdenticalLocalObservationsProduceDifferentStates()
+        {
+            var encoder = new StateEncoder();
+            var first = new GridObservation(
+                new GridPosition(5, 5), new GridPosition(22, 22),
+                CellType.Empty, CellType.Wall, CellType.Empty, CellType.Wall);
+            var second = new GridObservation(
+                new GridPosition(6, 5), new GridPosition(23, 22),
+                CellType.Empty, CellType.Wall, CellType.Empty, CellType.Wall);
+
+            Assert.NotEqual(encoder.Encode(first), encoder.Encode(second));
+        }
+
+        [Fact]
+        public void StateCountIncludesEveryGridPosition()
+        {
+            Assert.Equal(24 * 24 * StateEncoder.LocalStateCount, StateEncoder.StateCount);
+        }
     }
 }

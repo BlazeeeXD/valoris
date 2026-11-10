@@ -5,6 +5,7 @@ namespace Valoris.Core.Contracts
         None = 0,
         ReachedGoal = 1,
         EnteredTrap = 2,
-        StepLimit = 3
+        StepLimit = 3,
+        NoAvailableMoves = 4
     }
 }

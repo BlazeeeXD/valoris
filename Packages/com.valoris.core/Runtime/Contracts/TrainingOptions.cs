@@ -2,14 +2,14 @@ namespace Valoris.Core.Contracts
 {
     public sealed class TrainingOptions
     {
-        public int EpisodesPerLevel { get; set; } = 1000;
+        public int EpisodesPerLevel { get; set; } = 3000;
         public int MaxStepsPerEpisode { get; set; } = 300;
         public int EvaluationMaxSteps { get; set; } = 300;
         public double LearningRate { get; set; } = 0.15;
         public double DiscountFactor { get; set; } = 0.95;
         public double InitialEpsilon { get; set; } = 1.0;
         public double MinimumEpsilon { get; set; } = 0.05;
-        public double EpsilonDecay { get; set; } = 0.995;
+        public double EpsilonDecay { get; set; } = 0.9995;
         public int RandomSeed { get; set; } = 1;
         public RewardModel Rewards { get; set; } = new RewardModel();
 

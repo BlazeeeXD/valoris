@@ -17,4 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Packages/com.valoris.core/Valoris.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="../../Data/Maps/Fixtures/hard_01.json" Link="Fixtures/hard_01.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

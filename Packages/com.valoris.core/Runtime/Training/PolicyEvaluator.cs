@@ -28,7 +28,16 @@ namespace Valoris.Core.Training
             {
                 GridObservation observation = environment.Observe();
                 int state = encoder.Encode(observation);
-                int actionIndex = policy.ChooseGreedyAction(state);
+                int actionIndex = policy.ChooseGreedyAction(state, observation);
+
+                if (actionIndex < 0)
+                {
+                    // Defensive guard; valid campaign maps should not reach this branch.
+                    totalReward += timeoutPenalty;
+                    reason = TerminationReason.NoAvailableMoves;
+                    break;
+                }
+
                 StepResult transition = environment.Step((MoveAction)actionIndex);
                 totalReward += transition.Reward;
                 path.Add(transition.Position);

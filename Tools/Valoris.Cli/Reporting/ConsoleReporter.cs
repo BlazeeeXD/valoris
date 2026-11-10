@@ -1,4 +1,5 @@
 using Valoris.Core.Contracts;
+using Valoris.Core.Training;
 
 namespace Valoris.Core.Cli.Reporting
 {
@@ -6,11 +7,22 @@ namespace Valoris.Core.Cli.Reporting
     {
         public static void PrintTraining(TrainingResult result, int requestedEpisodes)
         {
+            const int windowSize = 100;
             int interval = System.Math.Max(1, requestedEpisodes / 10);
-            foreach (EpisodeMetric metric in result.EpisodeMetrics)
+            IReadOnlyList<EpisodeMetric> metrics = result.EpisodeMetrics;
+
+            Console.WriteLine("EPISODE | REWARD | STEPS | EPSILON | WINDOW SUCCESS | WINDOW AVG REWARD | RESULT");
+            for (int i = 0; i < metrics.Count; i++)
             {
+                EpisodeMetric metric = metrics[i];
                 if (metric.EpisodeNumber == 1 || metric.EpisodeNumber % interval == 0 || metric.EpisodeNumber == requestedEpisodes)
-                    Console.WriteLine($"Episode {metric.EpisodeNumber,5} | Reward {metric.TotalReward,8:F2} | Steps {metric.Steps,4} | Epsilon {metric.Epsilon:F3} | {metric.TerminationReason}");
+                {
+                    int start = System.Math.Max(0, i - windowSize + 1);
+                    int count = i - start + 1;
+                    double successRate = MetricsCollector.SuccessRate(metrics, start, count);
+                    double averageReward = MetricsCollector.AverageReward(metrics, start, count);
+                    Console.WriteLine($"{metric.EpisodeNumber,7} | {metric.TotalReward,7:F2} | {metric.Steps,5} | {metric.Epsilon,7:F3} | {successRate,13:P1} | {averageReward,17:F2} | {metric.TerminationReason}");
+                }
             }
 
             EvaluationResult eval = result.FinalEvaluation;

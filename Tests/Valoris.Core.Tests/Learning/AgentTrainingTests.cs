@@ -15,6 +15,29 @@ namespace Valoris.Core.Tests.Learning
         }
 
         [Fact]
+        public void PositionAwareAgentLearnsTheHardFixtureWithinThreeThousandEpisodes()
+        {
+            var agent = new ValorisAgent();
+            agent.BeginCampaign(7);
+            var options = new TrainingOptions
+            {
+                EpisodesPerLevel = 3000,
+                MaxStepsPerEpisode = 300,
+                EvaluationMaxSteps = 300,
+                RandomSeed = 7
+            };
+
+            TrainingResult result = agent.TrainLevel(TestLevelFactory.LoadHardFixture(), options);
+
+            Assert.True(result.FinalEvaluation.ReachedGoal,
+                "The position-aware learner should solve the known-valid hard fixture. " +
+                "Termination: " + result.FinalEvaluation.TerminationReason +
+                "; steps: " + result.FinalEvaluation.StepsTaken);
+            Assert.Equal(TerminationReason.ReachedGoal, result.FinalEvaluation.TerminationReason);
+            Assert.InRange(result.FinalEvaluation.StepsTaken, 72, 300);
+        }
+
+        [Fact]
         public void CampaignMemoryPersistsAcrossLevelsAndResetsAtNewCampaign()
         {
             var agent = new ValorisAgent();

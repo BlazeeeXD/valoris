@@ -46,7 +46,7 @@ namespace Valoris.Core.Cli
         private static int Train(Dictionary<string, string> args)
         {
             LevelDefinition level = LoadRequired(args);
-            int episodes = GetInt(args, "episodes", 1000);
+            int episodes = GetInt(args, "episodes", 3000);
             int seed = GetInt(args, "seed", 1);
             int maxSteps = GetInt(args, "max-steps", 300);
             var trainingOptions = new TrainingOptions
@@ -54,7 +54,12 @@ namespace Valoris.Core.Cli
                 EpisodesPerLevel = episodes,
                 MaxStepsPerEpisode = maxSteps,
                 EvaluationMaxSteps = GetInt(args, "eval-steps", maxSteps),
-                RandomSeed = seed
+                RandomSeed = seed,
+                LearningRate = GetDouble(args, "alpha", 0.15),
+                DiscountFactor = GetDouble(args, "gamma", 0.95),
+                InitialEpsilon = GetDouble(args, "epsilon", 1.0),
+                MinimumEpsilon = GetDouble(args, "min-epsilon", 0.05),
+                EpsilonDecay = GetDouble(args, "epsilon-decay", 0.9995)
             };
 
             var agent = new ValorisAgent();
@@ -81,9 +86,17 @@ namespace Valoris.Core.Cli
             string[] files = Directory.GetFiles(directory, "*.json").OrderBy(x => x).ToArray();
             if (files.Length == 0) throw new InvalidOperationException("No JSON maps found in " + directory);
 
-            int episodes = GetInt(args, "episodes", 1000);
+            int episodes = GetInt(args, "episodes", 3000);
             int seed = GetInt(args, "seed", 1);
-            var options = new TrainingOptions { EpisodesPerLevel = episodes, RandomSeed = seed };
+            var options = new TrainingOptions
+            {
+                EpisodesPerLevel = episodes,
+                RandomSeed = seed,
+                EpsilonDecay = GetDouble(args, "epsilon-decay", 0.9995),
+                MinimumEpsilon = GetDouble(args, "min-epsilon", 0.05),
+                LearningRate = GetDouble(args, "alpha", 0.15),
+                DiscountFactor = GetDouble(args, "gamma", 0.95)
+            };
             var persistentAgent = new ValorisAgent();
             persistentAgent.BeginCampaign(seed);
             int persistentWins = 0;
@@ -137,13 +150,17 @@ namespace Valoris.Core.Cli
         private static int GetInt(Dictionary<string, string> args, string key, int fallback)
             => args.TryGetValue(key, out string value) ? int.Parse(value, CultureInfo.InvariantCulture) : fallback;
 
+        private static double GetDouble(Dictionary<string, string> args, string key, double fallback)
+            => args.TryGetValue(key, out string value) ? double.Parse(value, CultureInfo.InvariantCulture) : fallback;
+
         private static void PrintUsage()
         {
             Console.WriteLine("Valoris CLI");
             Console.WriteLine("  inspect   --map <file.json>");
-            Console.WriteLine("  train     --map <file.json> [--episodes 1000] [--max-steps 300] [--seed 1] [--csv results.csv]");
-            Console.WriteLine("  evaluate  --map <file.json> [--episodes 1000] [--max-steps 300]");
-            Console.WriteLine("  benchmark --maps <directory> [--episodes 1000] [--seed 1]");
+            Console.WriteLine("  train     --map <file.json> [--episodes 3000] [--max-steps 300] [--seed 1]");
+            Console.WriteLine("            [--alpha 0.15] [--gamma 0.95] [--epsilon-decay 0.9995] [--min-epsilon 0.05] [--csv results.csv]");
+            Console.WriteLine("  evaluate  --map <file.json> [--episodes 3000] [--max-steps 300]");
+            Console.WriteLine("  benchmark --maps <directory> [--episodes 3000] [--seed 1]");
         }
     }
 }

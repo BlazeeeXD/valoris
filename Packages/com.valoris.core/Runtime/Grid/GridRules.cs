@@ -29,5 +29,6 @@ namespace Valoris.Core.Grid
 
         public static bool IsSafeTraversable(CellType cell)
             => cell != CellType.Wall && cell != CellType.Trap;
+
     }
 }
