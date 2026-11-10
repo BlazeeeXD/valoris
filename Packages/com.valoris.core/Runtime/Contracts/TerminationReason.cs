@@ -1,1 +1,10 @@
-// TODO: Implement this component. See Docs/ARCHITECTURE.md and Docs/INTERFACE_CONTRACT.md.
+namespace Valoris.Core.Contracts
+{
+    public enum TerminationReason : byte
+    {
+        None = 0,
+        ReachedGoal = 1,
+        EnteredTrap = 2,
+        StepLimit = 3
+    }
+}

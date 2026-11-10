@@ -1,35 +1,26 @@
-# Unity-generated data
+# Unity generated folders (project root)
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
-[Uu]serSettings/
+[Uu]ser[Ss]ettings/
 MemoryCaptures/
 Recordings/
 
-# Unity-generated solution/project files at repository root only.
+# Unity-generated IDE project files at repository root only
 /*.csproj
 /*.sln
 /*.slnx
+/*.user
 
-# IDE and user-specific files
-.vs/
-.idea/
-*.user
-*.suo
-*.userprefs
-
-# .NET build output
+# .NET generated output
 **/bin/
 **/obj/
 
-# OS files
+# IDE and OS files
+.vs/
+.idea/
 .DS_Store
 Thumbs.db
-Desktop.ini
-
-# Logs and crash output
-*.log
-sysinfo.txt

@@ -1,16 +1,4 @@
 * text=auto
-*.cs text eol=lf
-*.csproj text eol=lf
-*.json text eol=lf
-*.asmdef text eol=lf
-*.md text eol=lf
-*.meta text eol=lf
-*.unity text eol=lf
-*.prefab text eol=lf
-*.asset text eol=lf
-*.png binary
-*.jpg binary
-*.jpeg binary
-*.wav binary
-*.ogg binary
-*.mp3 binary
+*.cs text eol=crlf
+*.json text eol=crlf
+*.md text eol=crlf

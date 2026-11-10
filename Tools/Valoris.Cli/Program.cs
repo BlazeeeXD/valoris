@@ -1,10 +1,3 @@
-using System;
+using Valoris.Core.Cli;
 
-internal static class Program
-{
-    private static int Main(string[] args)
-    {
-        Console.WriteLine("Valoris CLI scaffold ready. Commands will be implemented next.");
-        return 0;
-    }
-}
+return CliApplication.Run(args);

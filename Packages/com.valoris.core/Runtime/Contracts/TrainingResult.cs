@@ -1,1 +1,11 @@
-// TODO: Implement this component. See Docs/ARCHITECTURE.md and Docs/INTERFACE_CONTRACT.md.
+using System.Collections.Generic;
+
+namespace Valoris.Core.Contracts
+{
+    public sealed class TrainingResult
+    {
+        public IReadOnlyList<EpisodeMetric> EpisodeMetrics { get; set; }
+        public EvaluationResult FinalEvaluation { get; set; }
+        public AgentMemorySummary MemoryAfterTraining { get; set; }
+    }
+}

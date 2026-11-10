@@ -1,9 +1,7 @@
 {
   "name": "Valoris.Game",
   "rootNamespace": "Valoris.Game",
-  "references": [
-    "Valoris.Core"
-  ],
+  "references": ["Valoris.Core"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
