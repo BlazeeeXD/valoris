@@ -88,7 +88,7 @@ namespace Valoris.Core.Training
                 _spatialEncoder,
                 _contextEncoder,
                 random,
-                contextWeight: 0.0);
+                contextWeight: 0.30);
 
             var runner = new TransferTrainingRunner();
 

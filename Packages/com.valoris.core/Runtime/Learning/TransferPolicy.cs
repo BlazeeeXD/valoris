@@ -1,3 +1,4 @@
+
 using System;
 using Valoris.Core.Contracts;
 
@@ -12,10 +13,16 @@ namespace Valoris.Core.Learning
         private readonly ContextEncoder _contextEncoder;
 
         private readonly Random _random;
+        private readonly double _contextDecayVisits;
 
+        // This is the maximum contextual influence, not a fixed weight.
         public double ContextWeight { get; }
 
+        // Spatial influence when the spatial action has zero visits.
+        // Actual spatial influence increases adaptively as visits accumulate.
         public double SpatialWeight => 1.0 - ContextWeight;
+
+        public double ContextDecayVisits => _contextDecayVisits;
 
         public TransferPolicy(
             QTable spatialQTable,
@@ -23,7 +30,8 @@ namespace Valoris.Core.Learning
             StateEncoder spatialEncoder,
             ContextEncoder contextEncoder,
             Random random,
-            double contextWeight = 0.30)
+            double contextWeight = 0.30,
+            double contextDecayVisits = 20.0)
         {
             _spatialQTable = spatialQTable
                 ?? throw new ArgumentNullException(nameof(spatialQTable));
@@ -40,13 +48,24 @@ namespace Valoris.Core.Learning
             _random = random
                 ?? throw new ArgumentNullException(nameof(random));
 
-            if (contextWeight < 0.0 || contextWeight > 1.0)
+            if (double.IsNaN(contextWeight) ||
+                double.IsInfinity(contextWeight) ||
+                contextWeight < 0.0 ||
+                contextWeight > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(contextWeight));
+            }
+
+            if (double.IsNaN(contextDecayVisits) ||
+                double.IsInfinity(contextDecayVisits) ||
+                contextDecayVisits <= 0.0)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(contextWeight));
+                    nameof(contextDecayVisits));
             }
 
             ContextWeight = contextWeight;
+            _contextDecayVisits = contextDecayVisits;
         }
 
         public int EncodeSpatial(GridObservation observation)
@@ -60,8 +79,29 @@ namespace Valoris.Core.Learning
         }
 
         /// <summary>
-        /// Combines spatial and contextual Q-values for an action.
-        /// Only legal actions are considered.
+        /// Returns the contextual influence for this specific
+        /// spatial state-action pair.
+        ///
+        /// No spatial experience: full configured contextual influence.
+        /// More spatial experience: progressively less contextual influence.
+        /// </summary>
+        public double GetContextWeight(
+            GridObservation observation,
+            int action)
+        {
+            int spatialState = EncodeSpatial(observation);
+
+            int visits = _spatialQTable.GetVisitCount(
+                spatialState,
+                action);
+
+            return ContextWeight /
+                   (1.0 + visits / _contextDecayVisits);
+        }
+
+        /// <summary>
+        /// Combines spatial and contextual Q-values using
+        /// adaptive, action-specific contextual weighting.
         /// </summary>
         public double GetCombinedValue(
             GridObservation observation,
@@ -76,8 +116,13 @@ namespace Valoris.Core.Learning
             double contextValue =
                 _contextQTable.GetValue(contextState, action);
 
-            return SpatialWeight * spatialValue
-                 + ContextWeight * contextValue;
+            double contextWeight =
+                GetContextWeight(observation, action);
+
+            double spatialWeight = 1.0 - contextWeight;
+
+            return spatialWeight * spatialValue
+                 + contextWeight * contextValue;
         }
 
         public int ChooseAction(
@@ -85,9 +130,7 @@ namespace Valoris.Core.Learning
             double epsilon)
         {
             if (epsilon < 0.0 || epsilon > 1.0)
-            {
                 throw new ArgumentOutOfRangeException(nameof(epsilon));
-            }
 
             int availableCount =
                 ActionAvailability.CountAvailable(observation);
@@ -117,13 +160,13 @@ namespace Valoris.Core.Learning
             for (int action = 0; action < 4; action++)
             {
                 if (!ActionAvailability.IsAvailable(
-                    observation, action))
+                    observation,
+                    action))
                 {
                     continue;
                 }
 
-                double value =
-                    GetCombinedValue(observation, action);
+                double value = GetCombinedValue(observation, action);
 
                 if (value > bestValue + 1e-12)
                 {
@@ -159,27 +202,23 @@ namespace Valoris.Core.Learning
             double learningRate,
             double discountFactor)
         {
-            int spatialState =
-                EncodeSpatial(currentObservation);
+            int spatialState = EncodeSpatial(currentObservation);
+            int contextState = EncodeContext(currentObservation);
 
-            int contextState =
-                EncodeContext(currentObservation);
-
-            int nextSpatialState =
-                EncodeSpatial(nextObservation);
-
-            int nextContextState =
-                EncodeContext(nextObservation);
+            int nextSpatialState = EncodeSpatial(nextObservation);
+            int nextContextState = EncodeContext(nextObservation);
 
             double spatialMaxNext = terminal
                 ? 0.0
                 : _spatialQTable.GetMaxValue(
-                    nextSpatialState, nextObservation);
+                    nextSpatialState,
+                    nextObservation);
 
             double contextMaxNext = terminal
                 ? 0.0
                 : _contextQTable.GetMaxValue(
-                    nextContextState, nextObservation);
+                    nextContextState,
+                    nextObservation);
 
             _spatialQTable.Update(
                 spatialState,
