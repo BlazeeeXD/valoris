@@ -1,8 +1,10 @@
+
 {
   "name": "Valoris.Game",
   "rootNamespace": "Valoris.Game",
   "references": [
-    "Valoris.Core"
+    "Valoris.Core",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
