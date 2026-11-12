@@ -152,6 +152,31 @@ namespace Valoris.Core.Tests.Learning
                 selected);
         }
 
+
+        [Fact]
+        public void ContextualInfluenceDecaysPerStateActionVisitCount()
+        {
+            var spatial = new QTable();
+            var contextual = new QTable();
+            var observation = OpenObservation();
+            var policy = CreatePolicy(spatial, contextual);
+            int spatialState = new StateEncoder().Encode(observation);
+            int action = (int)MoveAction.Right;
+
+            Assert.Equal(0.30, policy.GetContextWeight(observation, action), 8);
+
+            for (int i = 0; i < 20; i++)
+                spatial.Update(spatialState, action, 0.0, 0.0, 1.0, 0.0, true);
+
+            Assert.Equal(0.15, policy.GetContextWeight(observation, action), 8);
+            Assert.Equal(0.30, policy.GetContextWeight(observation, (int)MoveAction.Left), 8);
+
+            for (int i = 0; i < 40; i++)
+                spatial.Update(spatialState, action, 0.0, 0.0, 1.0, 0.0, true);
+
+            Assert.Equal(0.075, policy.GetContextWeight(observation, action), 8);
+        }
+
         [Fact]
         public void LearningUpdatesBothTables()
         {

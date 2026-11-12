@@ -1,0 +1,7 @@
+<Project>
+  <!-- Keep the shared Core DLL and intermediate assemblies outside Unity's Packages/ scan. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Valoris.Core'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory).dotnet/bin/Valoris.Core/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).dotnet/obj/Valoris.Core/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

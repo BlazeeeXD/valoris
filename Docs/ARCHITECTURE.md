@@ -1,44 +1,34 @@
-# Valoris Architecture
+# Valoris architecture
 
-## Repository layout
+## End-to-end loop
 
-- `Packages/com.valoris.core`: headless simulation, contracts, tabular Q-learning and training/evaluation. This is the source of truth shared by the CLI and Unity.
-- `Tools/Valoris.Cli`: terminal front end for loading JSON map fixtures, inspecting maps, training, evaluating and exporting metrics.
-- `Tests/Valoris.Core.Tests`: automated tests for simulation rules, learning, training and memory lifecycle.
-- `UnityProject` is not a nested folder in this repository. The Unity project root is the repository root; Unity's `Assets`, `Packages` and `ProjectSettings` directories remain at the root.
-- `Data/Maps/Fixtures`: deterministic hand-authored maps for regression tests and repeatable experiments.
+1. `ProceduralLevelGenerator` asks the scene's seeded `MazeGenerator` for a 24×24 base layout. The base map contains only Empty and Wall cells; Start and Goal are separate coordinates.
+2. `InventoryManager` creates a deterministic random count for each configured sabotage item from the level seed. `PlacementController` lets the player place/remove Wall, Trap and Mud while respecting inventory and endpoint rules.
+3. The Lock Board action copies the final cells into an immutable `LevelDefinition`. The AI never receives a Tilemap, GameObject or mutable Unity data.
+4. `LevelValidator` checks schema, dimensions, row-major cell values, endpoints and a BFS route that avoids walls and lethal traps.
+5. `ValorisAgentBridge` owns one `ValorisAgent` for the campaign. Training runs on a worker task; Core is pure C# and does not call Unity APIs.
+6. `TrainingResult.FinalEvaluation.Path` is replayed by `AgentPathAnimator`. The result state is displayed as success/failure. `CampaignManager`—not the agent—awards the point.
+7. The next level receives a derived seed and new item loadout. Spatial memory resets at each level while contextual memory persists until a new campaign begins.
 
-## Core boundaries
+## Assembly and package boundaries
 
-The Core package must not reference `UnityEngine`. It receives immutable `LevelDefinition` data and operates entirely on ordinary C# types. It returns `TrainingResult` containing episode metrics and an evaluation path. Unity owns rendering, input, animation, inventory, campaign UI and presentation playback.
+- `Valoris.Core` is an embedded Unity package at `Packages/com.valoris.core`. Its `Valoris.Core.asmdef` has `noEngineReferences: true`; it must never reference UnityEngine.
+- `Valoris.Game` compiles the player-facing Unity code under `Assets/_Valoris/Scripts` and references `Valoris.Core` plus the Input System.
+- `Valoris.Game.Editor` contains Editor-only debug tooling.
+- The .NET CLI and xUnit project reference the same Core `.csproj`, preventing a separate AI implementation from drifting away from Unity's package.
+- The root directory remains both Git root and Unity project root. Preserve `Packages/manifest.json` and `packages-lock.json`.
 
-## Runtime flow
+## Data contract
 
-1. Unity generates a base map and applies the player's selected sabotage items.
-2. Unity locks the board and creates an immutable `LevelDefinition` snapshot.
-3. The Core validator checks dimensions, cell values, endpoints and existence of a safe BFS route.
-4. One `ValorisAgent` instance is created per campaign; `BeginCampaign(seed)` is called once.
-5. For every locked level, `TrainLevel(level, options)` runs headless episodes against a deterministic `GridEnvironment`.
-6. The Q-table is retained in the agent instance across levels in the same campaign.
-7. A final greedy evaluation runs with exploration disabled and returns a path.
-8. Unity animates the path and awards the level point. The final evaluation determines the winner, not intermediate training episodes.
+The authoritative contract is documented in `Docs/INTERFACE_CONTRACT.md` and `Docs/LEVEL_JSON_SCHEMA.md`. The first release is 24×24, top-left origin, row-major index `y * width + x`; cell IDs are Empty=0, Wall=1, Trap=2, Mud=3; actions are Up=0, Right=1, Down=2, Left=3. Start and Goal are separate `GridPosition` values.
 
-## Learning design
+## Campaign rules
 
-The current baseline is tabular Q-learning. Its state key includes absolute position on the 24 x 24 map, adjacent terrain types and coarse goal-relative information. This fixes within-map aliasing between different coordinates that share similar local observations. The key space is sparse; only visited states allocate Q-values.
+A campaign has at most 15 levels. The first side to eight wins takes the campaign; otherwise the result is decided after level 15. The agent reports an evaluation; only Unity's campaign manager changes the score. The per-level board lock is released after its result is recorded so the next round can be locked independently.
 
-Action selection is epsilon-greedy over legal actions. Wall and out-of-bounds actions are masked during exploration, greedy action selection and the Bellman bootstrap. Trap cells remain available actions because they are meaningful terminal hazards. Greedy ties are resolved using the run's seeded random generator rather than a fixed first-action bias.
+## Known boundaries
 
-Campaign persistence reuses the same Q-table across levels. Since position and local terrain are both in the key, only sufficiently similar state contexts reuse values. This is conservative transfer, not a guarantee of generalization to arbitrary unseen layouts. The persistent-versus-reset benchmark must measure whether this transfer helps or harms.
-
-## Determinism and experiments
-
-Every map carries a level seed and level number. The agent combines campaign seed, options seed, map seed and level number to initialize the run RNG. Record map fixtures, training options and seeds alongside experiment output. Compare reset and persistent agents on the same map order and settings over multiple seeds.
-
-## Unity integration rule
-
-The integration boundary is data-only:
-
-`LevelDefinition -> IOralisAgent.TrainLevel -> TrainingResult.FinalEvaluation.Path`
-
-The Core package never receives a Tilemap, GameObject, Transform, SpriteRenderer, Animator or Rigidbody2D. Unity consumes the returned grid positions and animates them independently.
+- This is a tabular Q-learning demonstrator, not a general agent with guaranteed zero-shot generalization.
+- Context encoding intentionally aliases distant layouts. The adaptive transfer weight reduces but does not eliminate that risk.
+- The Unity base-map generator and the Core benchmark generator are separate seeded generators. Both emit the same contract; their random layout algorithms are intentionally not claimed to be identical.
+- No campaign save file or between-campaign learning persistence is included in this MVP.

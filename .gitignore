@@ -1,26 +1,41 @@
-# Unity generated folders (project root)
+# Unity-generated data
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
-[Uu]ser[Ss]ettings/
+[Uu]serSettings/
 MemoryCaptures/
 Recordings/
 
-# Unity-generated IDE project files at repository root only
+# Unity-generated solution/project files at repository root only.
 /*.csproj
 /*.sln
 /*.slnx
-/*.user
 
-# .NET generated output
+# IDE and user-specific files
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# .NET build output
 **/bin/
 **/obj/
 
-# IDE and OS files
-.vs/
-.idea/
+# OS files
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# Logs and crash output
+*.log
+sysinfo.txt
+# Python analysis cache
+__pycache__/
+*.py[cod]
+
+# Redirected .NET Core build output (kept outside Unity Packages/)
+.dotnet/

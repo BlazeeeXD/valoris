@@ -18,12 +18,21 @@ namespace Valoris.Core.Contracts
             if (EpisodesPerLevel <= 0) throw new System.ArgumentOutOfRangeException(nameof(EpisodesPerLevel));
             if (MaxStepsPerEpisode <= 0) throw new System.ArgumentOutOfRangeException(nameof(MaxStepsPerEpisode));
             if (EvaluationMaxSteps <= 0) throw new System.ArgumentOutOfRangeException(nameof(EvaluationMaxSteps));
-            if (LearningRate <= 0 || LearningRate > 1) throw new System.ArgumentOutOfRangeException(nameof(LearningRate));
-            if (DiscountFactor < 0 || DiscountFactor > 1) throw new System.ArgumentOutOfRangeException(nameof(DiscountFactor));
-            if (InitialEpsilon < 0 || InitialEpsilon > 1) throw new System.ArgumentOutOfRangeException(nameof(InitialEpsilon));
-            if (MinimumEpsilon < 0 || MinimumEpsilon > InitialEpsilon) throw new System.ArgumentOutOfRangeException(nameof(MinimumEpsilon));
-            if (EpsilonDecay <= 0 || EpsilonDecay > 1) throw new System.ArgumentOutOfRangeException(nameof(EpsilonDecay));
+            if (!IsFinite(LearningRate) || LearningRate <= 0 || LearningRate > 1)
+                throw new System.ArgumentOutOfRangeException(nameof(LearningRate));
+            if (!IsFinite(DiscountFactor) || DiscountFactor < 0 || DiscountFactor > 1)
+                throw new System.ArgumentOutOfRangeException(nameof(DiscountFactor));
+            if (!IsFinite(InitialEpsilon) || InitialEpsilon < 0 || InitialEpsilon > 1)
+                throw new System.ArgumentOutOfRangeException(nameof(InitialEpsilon));
+            if (!IsFinite(MinimumEpsilon) || MinimumEpsilon < 0 || MinimumEpsilon > InitialEpsilon)
+                throw new System.ArgumentOutOfRangeException(nameof(MinimumEpsilon));
+            if (!IsFinite(EpsilonDecay) || EpsilonDecay <= 0 || EpsilonDecay > 1)
+                throw new System.ArgumentOutOfRangeException(nameof(EpsilonDecay));
             if (Rewards == null) throw new System.ArgumentNullException(nameof(Rewards));
+            Rewards.Validate();
         }
+
+        private static bool IsFinite(double value)
+            => !double.IsNaN(value) && !double.IsInfinity(value);
     }
 }

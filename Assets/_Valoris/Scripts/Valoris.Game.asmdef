@@ -1,7 +1,11 @@
 {
   "name": "Valoris.Game",
   "rootNamespace": "Valoris.Game",
-  "references": ["Valoris.Core"],
+  "references": [
+    "Valoris.Core",
+    "Unity.InputSystem",
+    "Unity.TextMeshPro"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

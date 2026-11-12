@@ -3,6 +3,7 @@ using Valoris.Core.Contracts;
 using Valoris.Core.Grid;
 using Valoris.Core.Training;
 using Valoris.Core.Cli.Serialization;
+using Valoris.Core.Cli.Commands;
 using Valoris.Core.Cli.Rendering;
 using Valoris.Core.Cli.Reporting;
 
@@ -18,8 +19,14 @@ namespace Valoris.Core.Cli
             try
             {
                 if (command == "inspect") return Inspect(options);
-                if (command == "train" || command == "evaluate") return Train(options);
-                if (command == "benchmark") return Benchmark(options);
+                if (command == "train") return Train(options);
+                if (command == "evaluate")
+                {
+                    Console.WriteLine("Evaluate runs the configured training budget followed by the final greedy evaluation; saved-policy loading is not part of this MVP.");
+                    return Train(options);
+                }
+                if (command == "benchmark") return BenchmarkCommand.Run(options);
+                if (command == "generate") return GenerateCommand.Run(options);
                 PrintUsage();
                 return 2;
             }
@@ -34,7 +41,7 @@ namespace Valoris.Core.Cli
         {
             LevelDefinition level = LoadRequired(args);
             LevelValidationResult validation = new LevelValidator().Validate(level);
-            Console.WriteLine("VALORIS / LEVEL INSPECTOR");
+            Console.WriteLine("ORALIS / LEVEL INSPECTOR");
             Console.WriteLine($"Level: {level.LevelNumber} | Seed: {level.Seed} | Size: {level.Width}x{level.Height}");
             Console.WriteLine($"Start: {level.Start} | Goal: {level.Goal}");
             Console.WriteLine(AsciiGridRenderer.Render(level));
@@ -64,62 +71,28 @@ namespace Valoris.Core.Cli
 
             var agent = new ValorisAgent();
             agent.BeginCampaign(seed);
-            Console.WriteLine("VALORIS / Q-LEARNING");
-            Console.WriteLine($"Level {level.LevelNumber} | Seed {level.Seed} | Episodes {episodes}");
+            Console.WriteLine("ORALIS / Q-LEARNING");
+            Console.WriteLine($"Level {level.LevelNumber} | Map seed {level.Seed} | Run seed {seed} | Episodes {episodes}");
+            Console.WriteLine($"Steps: train {trainingOptions.MaxStepsPerEpisode}, evaluate {trainingOptions.EvaluationMaxSteps}");
+            Console.WriteLine($"Q-learning: alpha {trainingOptions.LearningRate.ToString(CultureInfo.InvariantCulture)}, " +
+                $"gamma {trainingOptions.DiscountFactor.ToString(CultureInfo.InvariantCulture)}, " +
+                $"epsilon {trainingOptions.InitialEpsilon.ToString(CultureInfo.InvariantCulture)} -> " +
+                $"{trainingOptions.MinimumEpsilon.ToString(CultureInfo.InvariantCulture)} " +
+                $"(decay {trainingOptions.EpsilonDecay.ToString(CultureInfo.InvariantCulture)})");
+            Console.WriteLine($"Rewards: goal {trainingOptions.Rewards.GoalReward}, trap {trainingOptions.Rewards.TrapPenalty}, " +
+                $"wall {trainingOptions.Rewards.WallPenalty}, mud {trainingOptions.Rewards.MudPenalty}, " +
+                $"step {trainingOptions.Rewards.StepPenalty}, timeout {trainingOptions.Rewards.TimeoutPenalty}");
+
             TrainingResult result = agent.TrainLevel(level, trainingOptions);
             ConsoleReporter.PrintTraining(result, episodes);
 
             string output = GetString(args, "csv");
             if (!string.IsNullOrWhiteSpace(output))
             {
-                CsvExporter.Export(result.EpisodeMetrics, output);
+                CsvExporter.Export(result.EpisodeMetrics, output, level, trainingOptions, result.FinalEvaluation);
                 Console.WriteLine("CSV exported: " + output);
             }
             // A game loss is a valid evaluation result, not a CLI execution error.
-            return 0;
-        }
-
-        private static int Benchmark(Dictionary<string, string> args)
-        {
-            string directory = GetString(args, "maps") ?? "Data/Maps/Fixtures";
-            if (!Directory.Exists(directory)) throw new DirectoryNotFoundException(directory);
-            string[] files = Directory.GetFiles(directory, "*.json").OrderBy(x => x).ToArray();
-            if (files.Length == 0) throw new InvalidOperationException("No JSON maps found in " + directory);
-
-            int episodes = GetInt(args, "episodes", 3000);
-            int seed = GetInt(args, "seed", 1);
-            var options = new TrainingOptions
-            {
-                EpisodesPerLevel = episodes,
-                RandomSeed = seed,
-                EpsilonDecay = GetDouble(args, "epsilon-decay", 0.9995),
-                MinimumEpsilon = GetDouble(args, "min-epsilon", 0.05),
-                LearningRate = GetDouble(args, "alpha", 0.15),
-                DiscountFactor = GetDouble(args, "gamma", 0.95)
-            };
-            var persistentAgent = new ValorisAgent();
-            persistentAgent.BeginCampaign(seed);
-            int persistentWins = 0;
-            int resetWins = 0;
-            Console.WriteLine("MAP,RESET_MEMORY,PERSISTENT_MEMORY,STEPS_RESET,STEPS_PERSISTENT");
-
-            foreach (string file in files)
-            {
-                LevelDefinition level = LevelJsonReader.Load(file);
-                var resetAgent = new ValorisAgent();
-                resetAgent.BeginCampaign(seed);
-                TrainingResult resetResult = resetAgent.TrainLevel(level, options);
-                TrainingResult persistentResult = persistentAgent.TrainLevel(level, options);
-                if (resetResult.FinalEvaluation.ReachedGoal) resetWins++;
-                if (persistentResult.FinalEvaluation.ReachedGoal) persistentWins++;
-                Console.WriteLine($"{Path.GetFileName(file)},{resetResult.FinalEvaluation.ReachedGoal},{persistentResult.FinalEvaluation.ReachedGoal},{resetResult.FinalEvaluation.StepsTaken},{persistentResult.FinalEvaluation.StepsTaken}");
-            }
-
-            Console.WriteLine();
-            Console.WriteLine($"Maps: {files.Length}");
-            Console.WriteLine($"Reset-memory successes: {resetWins}/{files.Length}");
-            Console.WriteLine($"Persistent-memory successes: {persistentWins}/{files.Length}");
-            Console.WriteLine("Note: use identical map fixtures and training settings for a fair comparison.");
             return 0;
         }
 
@@ -155,12 +128,16 @@ namespace Valoris.Core.Cli
 
         private static void PrintUsage()
         {
-            Console.WriteLine("Valoris CLI");
+            Console.WriteLine("Oralis CLI");
             Console.WriteLine("  inspect   --map <file.json>");
-            Console.WriteLine("  train     --map <file.json> [--episodes 3000] [--max-steps 300] [--seed 1]");
-            Console.WriteLine("            [--alpha 0.15] [--gamma 0.95] [--epsilon-decay 0.9995] [--min-epsilon 0.05] [--csv results.csv]");
+            Console.WriteLine("  train     --map <file.json> [--episodes 3000] [--max-steps 300] [--eval-steps 300] [--seed 1]");
+            Console.WriteLine("            [--alpha 0.15] [--gamma 0.95]");
+            Console.WriteLine("            [--epsilon 1.0] [--epsilon-decay 0.9995] [--min-epsilon 0.05] [--csv episodes.csv]");
             Console.WriteLine("  evaluate  --map <file.json> [--episodes 3000] [--max-steps 300]");
-            Console.WriteLine("  benchmark --maps <directory> [--episodes 3000] [--seed 1]");
+            Console.WriteLine("  benchmark --maps <directory> [--episodes 3000] [--seed 1] [--seed-count 5] [--csv summary.csv]");
+            Console.WriteLine("            [--episodes-csv episodes.csv] or --generated-maps 10 [--difficulty hard] [--seeds 1,2,3]");
+            Console.WriteLine("  generate  [--seed 1] [--level 1] [--difficulty easy|medium|hard] [--out map.json]");
+            Console.WriteLine("            [--passages N] [--traps N] [--mud N]");
         }
     }
 }

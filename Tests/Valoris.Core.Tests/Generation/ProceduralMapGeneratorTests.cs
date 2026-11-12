@@ -114,6 +114,27 @@ namespace Valoris.Core.Tests.Generation
                         || options.TrapCount == -1);
         }
 
+
+        [Fact]
+        public void BaseGameplayMapCanLeaveAllSabotagePlacementToThePlayer()
+        {
+            var options = new MapGenerationOptions
+            {
+                Seed = 8801,
+                LevelNumber = 1,
+                Difficulty = MapDifficulty.Hard,
+                TrapCount = 0,
+                MudCount = 0
+            };
+
+            MapGenerationResult result = _generator.Generate(options);
+
+            Assert.True(result.Validation.IsValid);
+            Assert.True(result.Validation.HasSafePath);
+            Assert.Equal(0, result.ActualTrapCount);
+            Assert.Equal(0, result.ActualMudCount);
+        }
+
         [Fact]
         public void GeneratedMapsAlwaysRetainASafeRoute()
         {

@@ -8,7 +8,7 @@ namespace Valoris.Core.Tests.Learning
     public sealed class MemoryPersistenceTests
     {
         [Fact]
-        public void QTableSurvivesLevelTransitionButResetsForNewCampaign()
+        public void ContextMemorySurvivesLevelTransitionButResetsForNewCampaign()
         {
             var agent = new ValorisAgent();
             agent.BeginCampaign(12);
@@ -21,12 +21,15 @@ namespace Valoris.Core.Tests.Learning
             };
 
             TrainingResult first = agent.TrainLevel(TestLevelFactory.OpenLevel(1, 100), options);
-            int firstStateCount = first.MemoryAfterTraining.LearnedStateCount;
+            int firstContextStates = first.MemoryAfterTraining.ContextLearnedStateCount;
+            Assert.True(firstContextStates > 0);
+            Assert.True(first.MemoryAfterTraining.SpatialLearnedStateCount > 0);
             TrainingResult second = agent.TrainLevel(TestLevelFactory.OpenLevel(2, 200), options);
 
             Assert.Equal(2, second.MemoryAfterTraining.CampaignLevelCount);
             Assert.True(second.MemoryAfterTraining.UpdateCount > first.MemoryAfterTraining.UpdateCount);
-            Assert.True(second.MemoryAfterTraining.LearnedStateCount >= firstStateCount);
+            Assert.True(second.MemoryAfterTraining.ContextLearnedStateCount >= firstContextStates);
+            Assert.True(second.MemoryAfterTraining.SpatialLearnedStateCount > 0);
 
             agent.BeginCampaign(13);
             AgentMemorySummary fresh = agent.GetMemorySummary();

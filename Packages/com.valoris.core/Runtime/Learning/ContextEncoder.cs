@@ -17,6 +17,9 @@ namespace Valoris.Core.Learning
 
         public int Encode(GridObservation observation)
         {
+            ValidatePosition(observation.Position, nameof(observation));
+            ValidatePosition(observation.Goal, nameof(observation));
+
             int code = (int)observation.North;
 
             code = code * 4 + (int)observation.East;
@@ -47,6 +50,17 @@ namespace Valoris.Core.Learning
             code = code * 3 + distanceBand;
 
             return code;
+        }
+
+        private static void ValidatePosition(GridPosition position, string name)
+        {
+            if (position.X < 0 || position.Y < 0 ||
+                position.X >= LevelDefinition.CampaignWidth ||
+                position.Y >= LevelDefinition.CampaignHeight)
+            {
+                throw new ArgumentOutOfRangeException(name,
+                    "Observation coordinates must be inside the 24 x 24 campaign grid.");
+            }
         }
 
         private static int Sign(int value)

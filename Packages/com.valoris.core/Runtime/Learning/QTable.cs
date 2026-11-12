@@ -92,10 +92,18 @@ namespace Valoris.Core.Learning
         {
             ValidateAction(action);
 
-            if (learningRate <= 0 || learningRate > 1)
+            if (double.IsNaN(reward) || double.IsInfinity(reward))
+                throw new ArgumentOutOfRangeException(nameof(reward));
+
+            if (double.IsNaN(maxNextValue) || double.IsInfinity(maxNextValue))
+                throw new ArgumentOutOfRangeException(nameof(maxNextValue));
+
+            if (double.IsNaN(learningRate) || double.IsInfinity(learningRate) ||
+                learningRate <= 0 || learningRate > 1)
                 throw new ArgumentOutOfRangeException(nameof(learningRate));
 
-            if (discountFactor < 0 || discountFactor > 1)
+            if (double.IsNaN(discountFactor) || double.IsInfinity(discountFactor) ||
+                discountFactor < 0 || discountFactor > 1)
                 throw new ArgumentOutOfRangeException(nameof(discountFactor));
 
             if (!_values.TryGetValue(state, out double[] values))

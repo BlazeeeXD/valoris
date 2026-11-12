@@ -1,8 +1,12 @@
 {
   "name": "Valoris.Game.Editor",
   "rootNamespace": "Valoris.Game.Editor",
-  "references": ["Valoris.Core", "Valoris.Game"],
-  "includePlatforms": ["Editor"],
+  "references": [
+    "Valoris.Game"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,

@@ -17,6 +17,25 @@ namespace Valoris.Core.Tests.Grid
         }
 
         [Fact]
+        public void RejectsNonPositiveLevelNumber()
+        {
+            LevelDefinition source = TestLevelFactory.OpenLevel();
+            var invalid = new LevelDefinition(
+                LevelDefinition.CurrentSchemaVersion,
+                0,
+                source.Seed,
+                source.Width,
+                source.Height,
+                source.CopyCells(),
+                source.Start,
+                source.Goal);
+
+            LevelValidationResult result = new LevelValidator().Validate(invalid);
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Messages, message => message.Contains("Level number must be positive"));
+        }
+
+        [Fact]
         public void RejectsUnknownCellValues()
         {
             LevelDefinition source = TestLevelFactory.OpenLevel();

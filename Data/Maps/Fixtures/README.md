@@ -1,3 +1,3 @@
-# Map fixtures
+# Fixed map fixtures
 
-These JSON maps use schemaVersion 1, numeric CellType IDs, row-major cells, and separate start/goal coordinates. Keep fixtures reproducible and include a known seed.
+`easy_01.json`, `medium_01.json` and `hard_01.json` are deterministic 24×24 maps used by inspect/train/benchmark. Each file follows `Docs/LEVEL_JSON_SCHEMA.md`; fixture level numbers define campaign transfer order.

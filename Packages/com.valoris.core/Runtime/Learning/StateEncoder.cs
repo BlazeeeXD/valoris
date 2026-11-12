@@ -29,6 +29,14 @@ namespace Valoris.Core.Learning
                     "Observation position is outside the 24 x 24 campaign grid.");
             }
 
+            if (observation.Goal.X < 0 || observation.Goal.Y < 0 ||
+                observation.Goal.X >= LevelDefinition.CampaignWidth ||
+                observation.Goal.Y >= LevelDefinition.CampaignHeight)
+            {
+                throw new ArgumentOutOfRangeException(nameof(observation),
+                    "Observation goal is outside the 24 x 24 campaign grid.");
+            }
+
             int code = EncodeNeighbourhood(observation);
 
             int dx = Sign(observation.Goal.X - position.X);

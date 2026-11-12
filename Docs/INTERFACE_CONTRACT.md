@@ -1,42 +1,50 @@
-# Valoris Core Interface Contract
+# Unity / AI interface contract
 
-## Board and coordinates
+## Ownership
 
-- Campaign board: 24 x 24.
-- Origin: top-left; X increases right; Y increases down.
-- Cell array order: row-major, `index = y * width + x`.
-- Cell IDs: `Empty=0`, `Wall=1`, `Trap=2`, `Mud=3`.
-- Start and Goal are separate `GridPosition` values; they are not `CellType` values.
-- Actions: `Up=0`, `Right=1`, `Down=2`, `Left=3`. No diagonal movement.
+Unity owns the mutable player board, placement rules, UI, campaign score and animation. `Valoris.Core` owns authoritative DTOs/enums, level validation, movement semantics, Q-learning, training, evaluation and memory. The AI receives a copied `LevelDefinition`, never a Unity object.
 
-## Environment rules
+## Values
 
-- Wall and out-of-bounds: no movement; wall penalty applies if a caller attempts the move.
-- Trap: entering ends the episode as failure.
-- Mud: traversable with an additional penalty.
-- Goal: entering ends the episode as success.
-- Validator: BFS confirms at least one route avoiding walls and lethal traps.
-- A locked level must not be mutated after it is handed to the Core package.
-- Core must not reference Unity presentation types or `UnityEngine`.
+```csharp
+public enum CellType : byte { Empty = 0, Wall = 1, Trap = 2, Mud = 3 }
+public enum MoveAction : byte { Up = 0, Right = 1, Down = 2, Left = 3 }
+```
 
-## Shared API
+- `GridPosition` uses integer X/Y with top-left origin.
+- Row-major array index: `y * width + x`.
+- Board is 24×24 in this release; `cells.Length == 576`.
+- Start and Goal are separate coordinates and must be distinct, in bounds, and Empty.
 
-- `LevelDefinition`: immutable snapshot of the final locked board.
-- `ILevelValidator.Validate(level)`: checks the board and reports whether a safe route exists.
-- `IOralisAgent.BeginCampaign(seed)`: resets campaign memory; call once per campaign.
-- `IOralisAgent.TrainLevel(level, options)`: trains on the locked level, then returns a final evaluation.
-- `TrainingResult`: episode metrics, final evaluation and memory summary.
-- `EvaluationResult.Path`: ordered `GridPosition` values including the start and each resulting position; Unity may animate this path.
+## LevelDefinition
 
-## Learning semantics
+`LevelSnapshotFactory.Create(GeneratedLevelData)` copies Unity's current cells to `LevelDefinition`. The Core DTO clones the supplied array and exposes only indexed reads or copies. A may continue to display the mutable board, but changes after snapshot creation do not alter the data being trained on.
 
-- State includes absolute grid position plus local terrain and goal context.
-- The agent selects only actions whose neighbouring cell is not a wall; traps remain selectable and carry terminal penalties.
-- Q-learning bootstraps only over legal actions in the next observation.
-- Evaluation disables epsilon exploration; equal-valued legal actions use seeded random tie-breaking.
-- Q-table memory persists between levels in one campaign and resets at `BeginCampaign`.
-- This is approximate transfer across procedural levels, not a claim of perfect generalization.
+Required fields: schema version, positive level number, seed, width, height, row-major numeric cells, Start and Goal.
 
-## Package boundaries
+## Validation
 
-The Core package is embedded at `Packages/com.valoris.core`. The CLI and test projects reference its `Valoris.Core.csproj`; Unity compiles the same runtime sources through `Valoris.Core.asmdef`.
+`ILevelValidator.Validate(level)` returns `LevelValidationResult` (`IsValid`, `HasSafePath`, `Messages`). It checks supported schema, 24×24 dimensions, cell IDs, exact array length, endpoints and BFS reachability without Wall/Trap cells. Mud is traversable.
+
+## Agent lifecycle
+
+```csharp
+IOralisAgent agent = new ValorisAgent();
+agent.BeginCampaign(campaignSeed); // once per campaign
+TrainingResult result = agent.TrainLevel(lockedLevel, options); // once per level
+AgentMemorySummary summary = agent.GetMemorySummary();
+```
+
+`TrainingResult` contains episode metrics, final greedy evaluation and memory summary. `EvaluationResult.Path` includes the starting coordinate and every subsequent position. `ReachedGoal` and `TerminationReason` decide the visual outcome; the path alone does not imply success.
+
+## Memory
+
+- Both tables update independently on each training transition.
+- Spatial table and per-action visit counts reset at the start of every level.
+- Context table is retained between levels of one campaign.
+- `BeginCampaign` clears both tables, visit counts and counters.
+- Context blending is action-specific and decays as spatial state-action visits accumulate.
+
+## Threading
+
+Core is Unity-independent and may run on a worker task. Unity object access, UI updates and path playback remain on the main thread. The game passes the immutable snapshot to `Task.Run` and resumes presentation after the awaited result.

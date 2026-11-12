@@ -7,6 +7,26 @@ namespace Valoris.Core.Tests.Learning
 {
     public sealed class QTableTests
     {
+
+        [Fact]
+        public void StateActionVisitCountsIncrementAndClearWithTheTable()
+        {
+            var table = new QTable();
+            const int state = 314;
+
+            Assert.Equal(0, table.GetVisitCount(state, (int)MoveAction.Right));
+            table.Update(state, (int)MoveAction.Right, 1.0, 0.0, 1.0, 0.0, true);
+            table.Update(state, (int)MoveAction.Right, 1.0, 0.0, 1.0, 0.0, true);
+            table.Update(state, (int)MoveAction.Left, 1.0, 0.0, 1.0, 0.0, true);
+
+            Assert.Equal(2, table.GetVisitCount(state, (int)MoveAction.Right));
+            Assert.Equal(1, table.GetVisitCount(state, (int)MoveAction.Left));
+
+            table.Clear();
+            Assert.Equal(0, table.GetVisitCount(state, (int)MoveAction.Right));
+            Assert.Equal(0, table.LearnedStateCount);
+        }
+
         [Fact]
         public void MaskedMaximumIgnoresWallActions()
         {

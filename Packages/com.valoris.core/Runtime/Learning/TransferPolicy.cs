@@ -18,8 +18,8 @@ namespace Valoris.Core.Learning
         // This is the maximum contextual influence, not a fixed weight.
         public double ContextWeight { get; }
 
-        // Spatial influence when the spatial action has zero visits.
-        // Actual spatial influence increases adaptively as visits accumulate.
+        // Spatial influence at zero visits. The effective per-action value
+        // increases as GetContextWeight decays with local evidence.
         public double SpatialWeight => 1.0 - ContextWeight;
 
         public double ContextDecayVisits => _contextDecayVisits;
@@ -129,7 +129,8 @@ namespace Valoris.Core.Learning
             GridObservation observation,
             double epsilon)
         {
-            if (epsilon < 0.0 || epsilon > 1.0)
+            if (double.IsNaN(epsilon) || double.IsInfinity(epsilon) ||
+                epsilon < 0.0 || epsilon > 1.0)
                 throw new ArgumentOutOfRangeException(nameof(epsilon));
 
             int availableCount =

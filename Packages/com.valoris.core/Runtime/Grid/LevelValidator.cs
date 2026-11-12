@@ -18,6 +18,8 @@ namespace Valoris.Core.Grid
 
             if (level.SchemaVersion != LevelDefinition.CurrentSchemaVersion)
                 messages.Add("Unsupported schema version: " + level.SchemaVersion + ".");
+            if (level.LevelNumber <= 0)
+                messages.Add("Level number must be positive.");
             if (level.Width != LevelDefinition.CampaignWidth || level.Height != LevelDefinition.CampaignHeight)
                 messages.Add("The first campaign release requires a 24 x 24 board.");
             if (level.Width <= 0 || level.Height <= 0)
