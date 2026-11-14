@@ -9,11 +9,15 @@ public class PlacementController : MonoBehaviour
     public ProceduralLevelGenerator levelGenerator;
     public GridManager gridManager;
     public Camera mainCamera;
+    public InventoryUIController inventoryUIController;
 
     [Header("Placement Settings")]
     public bool placementEnabled = true;
 
     private CampaignState campaignState = new CampaignState();
+
+    // Independent copy of the final locked level.
+    public GeneratedLevelData LockedLevelSnapshot { get; private set; }
 
     private void Update()
     {
@@ -76,6 +80,9 @@ public class PlacementController : MonoBehaviour
             );
 
             gridManager.RenderItem(position, cellType);
+
+             if (inventoryUIController != null)
+            inventoryUIController.RefreshInventory();
         }
     }
 
@@ -102,6 +109,8 @@ public class PlacementController : MonoBehaviour
         if (removed)
         {
             gridManager.ClearItem(position);
+            if (inventoryUIController != null)
+            inventoryUIController.RefreshInventory();
             Debug.Log($"Removed player-placed item at {position}");
         }
     }
@@ -133,13 +142,43 @@ public class PlacementController : MonoBehaviour
 
     public void LockBoard()
     {
+        if (campaignState.IsBoardLocked)
+        {
+            Debug.LogWarning("Board is already locked.");
+            return;
+        }
+
+        if (levelGenerator == null ||
+            levelGenerator.CurrentLevel == null)
+        {
+            Debug.LogError("Cannot lock board: Current level is missing!");
+            return;
+        }
+
+        // Create the snapshot before locking the board.
+        LockedLevelSnapshot = LevelSnapshotFactory.CreateSnapshot(
+            levelGenerator.CurrentLevel
+        );
+
+        if (LockedLevelSnapshot == null)
+        {
+            Debug.LogError("Cannot lock board: Snapshot creation failed!");
+            return;
+        }
+
         if (campaignState.LockBoard())
+        {
             placementEnabled = false;
+
+            Debug.Log("Board locked successfully.");
+            Debug.Log("Final level snapshot created.");
+        }
     }
 
     public void ResetBoard()
     {
         campaignState.ResetBoard();
         placementEnabled = true;
+        LockedLevelSnapshot = null;
     }
 }
