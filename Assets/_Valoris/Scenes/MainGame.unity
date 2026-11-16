@@ -2038,7 +2038,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c215a2ccb4f5bb14796e7c637b9fb866, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MazeGenerator
-  wallProbability: 0.25
 --- !u!114 &1527777194
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2244,7 +2243,6 @@ MonoBehaviour:
   levelGenerator: {fileID: 1527777194}
   gridManager: {fileID: 303237519}
   mainCamera: {fileID: 534945874}
-  inventoryUIController: {fileID: 82879216}
   placementEnabled: 1
 --- !u!4 &1818706376
 Transform:
