@@ -35,17 +35,29 @@ public class CampaignState
     public void ResetBoard() => boardLocked = false;
 
     public void RecordLevelResult(bool aiReachedGoal)
-    {
-        if (!boardLocked) throw new InvalidOperationException("A result cannot be recorded before the level is locked.");
-        if (IsComplete) throw new InvalidOperationException("The campaign is already complete.");
+{
+    if (!boardLocked)
+        throw new InvalidOperationException("A result cannot be recorded before the level is locked.");
 
-        if (aiReachedGoal) AiScore++;
-        else PlayerScore++;
-        CompletedLevels++;
-        // The just-completed board is no longer locked. The next level must be
-        // lockable independently; keeping this true silently breaks round 2+.
-        boardLocked = false;
-        IsComplete = CampaignRules.IsCampaignComplete(this);
-        if (!IsComplete) CurrentLevel++;
+    if (IsComplete)
+        throw new InvalidOperationException("The campaign is already complete.");
+
+    if (aiReachedGoal)
+        AiScore++;
+    else
+        PlayerScore++;
+
+    CompletedLevels++;
+    boardLocked = false;
+    IsComplete = CampaignRules.IsCampaignComplete(this);
+}
+
+    public bool AdvanceToNextLevel()
+    {
+        if (IsComplete || CompletedLevels >= MaxLevels)
+            return false;
+
+        CurrentLevel++;
+        return true;
     }
 }

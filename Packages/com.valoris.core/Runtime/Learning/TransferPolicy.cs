@@ -15,13 +15,8 @@ namespace Valoris.Core.Learning
         private readonly Random _random;
         private readonly double _contextDecayVisits;
 
-        // This is the maximum contextual influence, not a fixed weight.
         public double ContextWeight { get; }
-
-        // Spatial influence at zero visits. The effective per-action value
-        // increases as GetContextWeight decays with local evidence.
         public double SpatialWeight => 1.0 - ContextWeight;
-
         public double ContextDecayVisits => _contextDecayVisits;
 
         public TransferPolicy(
@@ -60,8 +55,7 @@ namespace Valoris.Core.Learning
                 double.IsInfinity(contextDecayVisits) ||
                 contextDecayVisits <= 0.0)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(contextDecayVisits));
+                throw new ArgumentOutOfRangeException(nameof(contextDecayVisits));
             }
 
             ContextWeight = contextWeight;
@@ -78,13 +72,6 @@ namespace Valoris.Core.Learning
             return _contextEncoder.Encode(observation);
         }
 
-        /// <summary>
-        /// Returns the contextual influence for this specific
-        /// spatial state-action pair.
-        ///
-        /// No spatial experience: full configured contextual influence.
-        /// More spatial experience: progressively less contextual influence.
-        /// </summary>
         public double GetContextWeight(
             GridObservation observation,
             int action)
@@ -99,10 +86,6 @@ namespace Valoris.Core.Learning
                    (1.0 + visits / _contextDecayVisits);
         }
 
-        /// <summary>
-        /// Combines spatial and contextual Q-values using
-        /// adaptive, action-specific contextual weighting.
-        /// </summary>
         public double GetCombinedValue(
             GridObservation observation,
             int action)
@@ -129,9 +112,13 @@ namespace Valoris.Core.Learning
             GridObservation observation,
             double epsilon)
         {
-            if (double.IsNaN(epsilon) || double.IsInfinity(epsilon) ||
-                epsilon < 0.0 || epsilon > 1.0)
+            if (double.IsNaN(epsilon) ||
+                double.IsInfinity(epsilon) ||
+                epsilon < 0.0 ||
+                epsilon > 1.0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(epsilon));
+            }
 
             int availableCount =
                 ActionAvailability.CountAvailable(observation);
@@ -139,7 +126,6 @@ namespace Valoris.Core.Learning
             if (availableCount == 0)
                 return -1;
 
-            // Exploration.
             if (_random.NextDouble() < epsilon)
             {
                 return ActionAvailability.GetAvailableAt(
@@ -155,10 +141,14 @@ namespace Valoris.Core.Learning
             int bestAction = -1;
             double bestValue = double.NegativeInfinity;
 
-            int[] tiedActions = new int[4];
+            int[] tiedActions =
+                new int[ActionAvailability.ActionCount];
+
             int tieCount = 0;
 
-            for (int action = 0; action < 4; action++)
+            for (int action = 0;
+                 action < ActionAvailability.ActionCount;
+                 action++)
             {
                 if (!ActionAvailability.IsAvailable(
                     observation,
@@ -167,7 +157,8 @@ namespace Valoris.Core.Learning
                     continue;
                 }
 
-                double value = GetCombinedValue(observation, action);
+                double value =
+                    GetCombinedValue(observation, action);
 
                 if (value > bestValue + 1e-12)
                 {
@@ -189,11 +180,6 @@ namespace Valoris.Core.Learning
             return tiedActions[_random.Next(tieCount)];
         }
 
-        /// <summary>
-        /// Updates both tables independently using standard Q-learning.
-        /// Spatial learning is map-specific.
-        /// Contextual learning is transferable.
-        /// </summary>
         public void Learn(
             GridObservation currentObservation,
             int action,
@@ -203,11 +189,17 @@ namespace Valoris.Core.Learning
             double learningRate,
             double discountFactor)
         {
-            int spatialState = EncodeSpatial(currentObservation);
-            int contextState = EncodeContext(currentObservation);
+            int spatialState =
+                EncodeSpatial(currentObservation);
 
-            int nextSpatialState = EncodeSpatial(nextObservation);
-            int nextContextState = EncodeContext(nextObservation);
+            int contextState =
+                EncodeContext(currentObservation);
+
+            int nextSpatialState =
+                EncodeSpatial(nextObservation);
+
+            int nextContextState =
+                EncodeContext(nextObservation);
 
             double spatialMaxNext = terminal
                 ? 0.0
@@ -241,3 +233,4 @@ namespace Valoris.Core.Learning
         }
     }
 }
+    

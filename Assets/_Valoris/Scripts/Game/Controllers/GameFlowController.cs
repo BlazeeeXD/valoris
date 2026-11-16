@@ -73,8 +73,13 @@ public class GameFlowController : MonoBehaviour
         if (_trainingUi == null) _trainingUi = gameObject.AddComponent<TrainingUIController>();
         _resultsUi = GetComponent<ResultsUIController>();
         if (_resultsUi == null) _resultsUi = gameObject.AddComponent<ResultsUIController>();
-        _inventoryUi = GetComponent<InventoryUIController>();
-        if (_inventoryUi == null) _inventoryUi = gameObject.AddComponent<InventoryUIController>();
+        _inventoryUi = FindObjectOfType<InventoryUIController>();
+
+        if (_inventoryUi == null)
+        {
+            Debug.LogError("GameFlowController: InventoryUIController not found in scene.");
+            return;
+        }
         _pathAnimator = GetComponent<AgentPathAnimator>();
         if (_pathAnimator == null) _pathAnimator = gameObject.AddComponent<AgentPathAnimator>();
 
@@ -93,7 +98,7 @@ public class GameFlowController : MonoBehaviour
         if (_generator.CurrentLevel != null)
         {
             _session.BeginLevel(_generator.CurrentLevel);
-            _inventory.ResetInventory(_generator.CurrentLevel.seed);
+            _inventory.ResetFirstRunInventory();
         }
 
         _hud.Initialize(_campaign, _inventory);
@@ -198,6 +203,9 @@ public class GameFlowController : MonoBehaviour
     {
         Initialize();
         if (!_initialized || _session.IsTraining || !_campaign.CanStartNextLevel) return;
+        if (!_campaign.State.AdvanceToNextLevel())
+        return;
+
         int level = _campaign.State.CurrentLevel;
         int seed = _campaign.GetSeedForLevel(level);
         _placement.ResetForNextLevel();
@@ -227,7 +235,7 @@ public class GameFlowController : MonoBehaviour
         if (_generator.CurrentLevel != null)
         {
             _session.BeginLevel(_generator.CurrentLevel);
-            _inventory.ResetInventory(firstLevelSeed);
+            _inventory.ResetFirstRunInventory();
         }
         _hud.Refresh(_campaign.State, _inventory);
         _hud.SetStatus("New campaign started. Place sabotage and lock the board.\n" + _hud.GetInventoryHelp());

@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using Valoris.Core.Contracts;
@@ -30,16 +31,15 @@ namespace Valoris.Core.Training
                 environment.Position
             };
 
+            var actions = new List<MoveAction>();
+
             double totalReward = 0.0;
-
             TerminationReason reason = TerminationReason.None;
-
             int steps = 0;
 
             for (int step = 1; step <= maxSteps; step++)
             {
-                GridObservation observation =
-                    environment.Observe();
+                GridObservation observation = environment.Observe();
 
                 int action = policy.ChooseGreedyAction(observation);
 
@@ -50,15 +50,15 @@ namespace Valoris.Core.Training
                     break;
                 }
 
-                StepResult transition = environment.Step(
-                    (MoveAction)action);
+                MoveAction selectedAction = (MoveAction)action;
 
+                StepResult transition = environment.Step(selectedAction);
+
+                actions.Add(selectedAction);
                 totalReward += transition.Reward;
-
                 path.Add(transition.Position);
 
                 steps = step;
-
                 reason = transition.TerminationReason;
 
                 if (transition.IsTerminal)
@@ -73,16 +73,12 @@ namespace Valoris.Core.Training
 
             return new EvaluationResult
             {
-                ReachedGoal =
-                    reason == TerminationReason.ReachedGoal,
-
+                ReachedGoal = reason == TerminationReason.ReachedGoal,
                 StepsTaken = steps,
-
                 TotalReward = totalReward,
-
                 TerminationReason = reason,
-
-                Path = path.AsReadOnly()
+                Path = path.AsReadOnly(),
+                Actions = actions.AsReadOnly()
             };
         }
     }
