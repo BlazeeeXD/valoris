@@ -6,12 +6,18 @@ public class TrainingUIController : UnityEngine.MonoBehaviour
     public void Initialize(CampaignHUDController hud) => _hud = hud;
 
     public void ShowTraining(int levelNumber, int episodes)
-        => _hud?.SetStatus("Level " + levelNumber + ": training for " + episodes + " episodes.\nThe final greedy evaluation will be replayed after training.");
+        => _hud?.SetStatus("Level " + levelNumber + ": adaptive Q-learning for " + episodes + " episodes.\nThe final greedy evaluation will be replayed after training.");
 
-    public void ShowCompleted(TrainingResult result)
+    public void ShowEasy(int levelNumber, int maxSteps)
+        => _hud?.SetStatus("Level " + levelNumber + ": Easy local heuristic. No Q-learning training is performed; the path budget is " + maxSteps + " moves.");
+
+    public void ShowCompleted(TrainingResult result, AgentDifficulty difficulty)
     {
         if (result == null || result.FinalEvaluation == null) return;
-        _hud?.SetStatus("Training complete. Evaluation: " + result.FinalEvaluation.TerminationReason +
+        string mode = difficulty == AgentDifficulty.Easy
+            ? "Easy navigation complete."
+            : "Training complete.";
+        _hud?.SetStatus(mode + " Evaluation: " + result.FinalEvaluation.TerminationReason +
             " in " + result.FinalEvaluation.StepsTaken + " steps. Replaying path...");
     }
 }

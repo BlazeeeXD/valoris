@@ -51,7 +51,8 @@ namespace Valoris.Core.Tests.Learning
                 InitialEpsilon = 0.0,
                 MinimumEpsilon = 0.0,
                 EpsilonDecay = 1.0,
-                RandomSeed = 9
+                RandomSeed = 9,
+                Difficulty = AgentDifficulty.Normal
             };
 
             TrainingResult first = agent.TrainLevel(AdjacentGoalLevel(1, 1, 1, 100), options);
@@ -69,6 +70,31 @@ namespace Valoris.Core.Tests.Learning
             Assert.Equal(0, fresh.ContextLearnedStateCount);
             Assert.Equal(0, fresh.SpatialLearnedStateCount);
             Assert.Equal(0, fresh.CampaignLevelCount);
+        }
+
+        [Fact]
+        public void EasyModeUsesHeuristicWithoutTrainingOrQTableUpdates()
+        {
+            var agent = new ValorisAgent();
+            agent.BeginCampaign(777);
+
+            var options = new TrainingOptions
+            {
+                Difficulty = AgentDifficulty.Easy,
+                EpisodesPerLevel = 1,
+                MaxStepsPerEpisode = 300,
+                EvaluationMaxSteps = 300,
+                RandomSeed = 19
+            };
+
+            TrainingResult result = agent.TrainLevel(
+                TestLevelFactory.OpenLevel(),
+                options);
+
+            Assert.Empty(result.EpisodeMetrics);
+            Assert.Equal(0, result.MemoryAfterTraining.UpdateCount);
+            Assert.Equal(0, result.MemoryAfterTraining.LearnedStateCount);
+            Assert.True(result.FinalEvaluation.StepsTaken > 0);
         }
 
         private static LevelDefinition AdjacentGoalLevel(int startX, int startY, int levelNumber, int seed)

@@ -1,6 +1,6 @@
 # Oralis (Valoris project)
 
-Oralis is a top-down 2D grid roguelite where the player places a limited random loadout of sabotage items on a seeded 24×24 map. After the board is locked, a headless tabular Q-learning agent trains on the exact immutable board snapshot, performs a final greedy evaluation, and replays the resulting path in Unity. A successful agent run gives the AI one campaign point; failure gives the player one point.
+Oralis is a top-down 2D grid roguelite where the player places a limited random loadout of sabotage items on a seeded 24×24 map. After the board is locked, the selected agent runs on the exact immutable board snapshot: Easy uses a local heuristic, while Normal and Hard train the tabular dual-memory Q-learning agent before its final greedy evaluation. Unity then replays the resulting path. A successful agent run gives the AI one campaign point; failure gives the player one point.
 
 The repository root is both the Git root and the Unity project root. **Open this exact folder in Unity Hub.** This archive preserves the uploaded project's Unity Editor version (`6000.5.9f1`) and package manifest.
 
@@ -8,12 +8,17 @@ The repository root is both the Git root and the Unity project root. **Open this
 
 1. Open the repository root in Unity Hub and allow package import/compilation to finish.
 2. Open `Assets/_Valoris/Scenes/MainGame.unity` (also configured as the first build scene).
-3. Press Play.
+3. Press Play and choose Easy, Normal or Hard in the difficulty overlay.
 4. Press `1`, `2` or `3` to select Wall, Trap or Mud (selection is based on each item's CellType, not its Inspector array order). Left-click an empty tile to place the selected sabotage. Right-click a player-placed item to remove it.
-5. Press **Lock Board**. The game validates that a route still exists, freezes placement, trains the AI off the Unity main thread, then replays the final greedy path.
+5. Press **Lock Board**. The game validates that a route still exists, freezes placement, runs the selected agent (adaptive Q-learning on a worker thread for Normal/Hard), then replays its path.
 6. Press `N` to proceed to the next level. The first side to eight points wins; otherwise the campaign ends after fifteen levels. Press `R` after the campaign finishes to start a new one.
 
-The HUD shows the level, score, remaining loadout, training/evaluation result and memory summary. The same level seed also determines the per-level item quantities.
+The HUD shows the level, score, remaining loadout, agent result and memory summary. The same level seed also determines the per-level item quantities.
+
+- **Easy:** local heuristic; no Q-learning or cross-level memory.
+- **Normal:** adaptive dual-memory Q-learning, 500 episodes per level by default; contextual memory persists between levels.
+- **Hard:** original full adaptive Q-learning, 3,000 episodes per level by default.
+
 
 ## Build the headless AI and run tests
 
@@ -62,3 +67,11 @@ See `Docs/TEST_PLAN.md`, `Docs/EXPERIMENTS.md` and `Docs/VERIFICATION_STATUS.md`
 ## Unity-generated folders
 
 `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `bin/` and `obj/` are intentionally not included. Unity regenerates its local cache folders on first open; .NET regenerates build folders when the CLI/tests are built. Do not commit those generated folders.
+
+
+## Latest gameplay balance patch
+
+- Easy's evaluation is capped at 230 steps by default (instead of sharing the full 300-step evaluation budget). If it does not reach the goal inside that budget, the player receives the point.
+- Normal keeps dual-memory Q-learning and cross-level contextual learning. Its final path replay now detects a proposed move into one of the last 8 positions and chooses the best-valued legal move outside that short loop when possible. If the agent is at a genuine dead end, it is allowed to backtrack.
+- Hard is unchanged: full training budget and original greedy final evaluation.
+- The loop guard does not change the Bellman update, Q-table contents, or training episodes.

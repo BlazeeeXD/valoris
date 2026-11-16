@@ -9,6 +9,7 @@ Unity owns the mutable player board, placement rules, UI, campaign score and ani
 ```csharp
 public enum CellType : byte { Empty = 0, Wall = 1, Trap = 2, Mud = 3 }
 public enum MoveAction : byte { Up = 0, Right = 1, Down = 2, Left = 3 }
+public enum AgentDifficulty { Easy = 0, Normal = 1, Hard = 2 }
 ```
 
 - `GridPosition` uses integer X/Y with top-left origin.
@@ -35,7 +36,11 @@ TrainingResult result = agent.TrainLevel(lockedLevel, options); // once per leve
 AgentMemorySummary summary = agent.GetMemorySummary();
 ```
 
-`TrainingResult` contains episode metrics, final greedy evaluation and memory summary. `EvaluationResult.Path` includes the starting coordinate and every subsequent position. `ReachedGoal` and `TerminationReason` decide the visual outcome; the path alone does not imply success.
+`TrainingResult` contains episode metrics, the final policy run and memory summary. Normal/Hard populate the episode metrics and use greedy Q-policy evaluation; Easy skips training and returns the heuristic run as `FinalEvaluation`. `EvaluationResult.Path` includes the starting coordinate and every subsequent position. `ReachedGoal` and `TerminationReason` decide the visual outcome; the path alone does not imply success.
+
+## Difficulty
+
+`TrainingOptions.Difficulty` selects the gameplay policy. Easy runs `GreedyHeuristicEvaluator` without Q-table updates. Normal and Hard use the same adaptive dual-memory Q-learning path; Unity supplies 500 episodes per level for Normal and 3,000 for Hard by default. Both adaptive modes retain contextual Q-values between levels while resetting spatial Q-values.
 
 ## Memory
 

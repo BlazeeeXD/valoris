@@ -8,6 +8,16 @@ namespace Valoris.Core.Tests.Learning
     public sealed class TrainingOptionsValidationTests
     {
         [Fact]
+        public void RejectsUndefinedAgentDifficulty()
+        {
+            var options = new TrainingOptions
+            {
+                Difficulty = (AgentDifficulty)99
+            };
+            Assert.Throws<ArgumentOutOfRangeException>(() => options.Validate());
+        }
+
+        [Fact]
         public void RejectsNonFiniteLearningRate()
         {
             var options = new TrainingOptions { LearningRate = double.NaN };
@@ -38,5 +48,6 @@ namespace Valoris.Core.Tests.Learning
             Assert.Throws<ArgumentOutOfRangeException>(() =>
                 table.Update(1, 0, double.NaN, 0.0, 0.1, 0.9, true));
         }
+
     }
 }

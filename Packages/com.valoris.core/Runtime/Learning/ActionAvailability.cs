@@ -6,6 +6,8 @@ namespace Valoris.Core.Learning
     /// <summary>Provides a shared legal-action mask. Walls and out-of-bounds cells are never selected.</summary>
     public static class ActionAvailability
     {
+        public const int ActionCount = 4;
+
         public static bool IsAvailable(GridObservation observation, int action)
         {
             switch ((MoveAction)action)

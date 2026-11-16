@@ -177,6 +177,7 @@ namespace Valoris.Core.Tests.Learning
             Assert.Equal(0.075, policy.GetContextWeight(observation, action), 8);
         }
 
+
         [Fact]
         public void LearningUpdatesBothTables()
         {

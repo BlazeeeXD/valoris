@@ -2,7 +2,15 @@
 
 ## Goal
 
-The player tries to prevent the AI from reaching the goal. The AI trains on the final, player-modified map and then makes one deterministic greedy evaluation attempt. AI success gives the AI a point; any final-evaluation failure gives the player a point.
+The player tries to prevent the AI from reaching the goal. The selected agent runs on the final, player-modified map. AI success gives the AI a point; any final-run failure gives the player a point.
+
+## AI difficulty
+
+- **Easy:** a simple local heuristic with no Q-learning and no knowledge transferred between levels.
+- **Normal:** adaptive spatial/contextual Q-learning with 500 training episodes per level by default. Contextual learning persists across levels.
+- **Hard:** the original full adaptive Q-learning agent with 3,000 training episodes per level by default.
+
+The selected mode remains active for the campaign. Episode budgets are adjustable balance values; they do not guarantee a particular win rate.
 
 ## Board and coordinates
 
@@ -22,7 +30,7 @@ The player tries to prevent the AI from reaching the goal. The AI trains on the 
 | Left mouse | Place selected sabotage on an empty non-endpoint tile |
 | Right mouse | Remove a player-placed sabotage item and restore its inventory unit |
 | Lock Board button | Validate, freeze board and begin training/evaluation |
-| `N` | Start next campaign level after the result replay |
+| `N` | Start the next level after the result replay |
 | `R` | Start a new campaign after the current campaign finishes |
 
 The loadout is seeded from the level seed. Each non-null item definition contributes a random quantity from one up to its configured `startingQuantity`; this makes a repeat of the same seed reproducible.
@@ -39,7 +47,7 @@ The loadout is seeded from the level seed. Each non-null item definition contrib
 
 - Default maximum: 15 levels.
 - First to 8 wins takes the campaign.
-- The final greedy evaluation, not the best training episode, decides each point.
+- The final agent run, not the best training episode, decides each point.
 - A new level resets spatial Q-values/visits and generates a new deterministic sabotage loadout; contextual Q-values continue within the same campaign.
 - A new campaign resets both memory layers.
 

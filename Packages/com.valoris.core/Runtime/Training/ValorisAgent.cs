@@ -65,10 +65,6 @@ namespace Valoris.Core.Training
                     nameof(level));
             }
 
-            // Keep contextual memory.
-            // Clear only the previous level's spatial memory.
-            _memory.BeginLevel();
-
             int seed = CombineSeed(
                 _campaignSeed,
                 options.RandomSeed,
@@ -81,6 +77,29 @@ namespace Valoris.Core.Training
                 new GridEnvironment(options.Rewards);
 
             environment.Reset(level);
+
+            if (options.Difficulty == AgentDifficulty.Easy)
+            {
+                var easyEvaluator = new GreedyHeuristicEvaluator();
+                EvaluationResult easyEvaluation = easyEvaluator.Evaluate(
+                    environment,
+                    options.EvaluationMaxSteps,
+                    options.Rewards.TimeoutPenalty,
+                    random);
+
+                _memory.CampaignLevelCount++;
+
+                return new TrainingResult
+                {
+                    EpisodeMetrics = Array.Empty<EpisodeMetric>(),
+                    FinalEvaluation = easyEvaluation,
+                    MemoryAfterTraining = GetMemorySummary()
+                };
+            }
+
+            // Normal and Hard retain the existing transfer-learning lifecycle:
+            // contextual memory persists; map-specific spatial memory resets.
+            _memory.BeginLevel();
 
             var policy = new TransferPolicy(
                 _memory.SpatialQTable,
@@ -104,7 +123,8 @@ namespace Valoris.Core.Training
                 environment,
                 policy,
                 options.EvaluationMaxSteps,
-                options.Rewards.TimeoutPenalty);
+                options.Rewards.TimeoutPenalty,
+                preventShortLoops: options.Difficulty == AgentDifficulty.Normal);
 
             _memory.CampaignLevelCount++;
 

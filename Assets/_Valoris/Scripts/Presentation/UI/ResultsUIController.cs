@@ -24,9 +24,12 @@ public class ResultsUIController : MonoBehaviour
             AgentMemorySummary memory = result.MemoryAfterTraining;
             metrics = "\nEvaluation: " + result.FinalEvaluation.TerminationReason +
                 " | Steps: " + result.FinalEvaluation.StepsTaken +
-                " | Reward: " + result.FinalEvaluation.TotalReward.ToString("0.0") +
-                "\nTraining success: " + successRate.ToString("0.0") + "%" +
-                " | Avg reward: " + averageReward.ToString("0.0");
+                " | Reward: " + result.FinalEvaluation.TotalReward.ToString("0.0");
+            if (episodes != null && episodes.Count > 0)
+                metrics += "\nTraining success: " + successRate.ToString("0.0") + "%" +
+                           " | Avg reward: " + averageReward.ToString("0.0");
+            else
+                metrics += "\nTraining: skipped (Easy local heuristic)";
             if (memory != null)
                 metrics += "\nMemory: " + memory.ContextLearnedStateCount + " context states / " +
                     memory.SpatialLearnedStateCount + " spatial states / " + memory.UpdateCount + " updates";

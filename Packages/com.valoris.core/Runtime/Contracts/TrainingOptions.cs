@@ -11,6 +11,8 @@ namespace Valoris.Core.Contracts
         public double MinimumEpsilon { get; set; } = 0.05;
         public double EpsilonDecay { get; set; } = 0.9995;
         public int RandomSeed { get; set; } = 1;
+        public AgentDifficulty Difficulty { get; set; } = AgentDifficulty.Hard;
+
         public RewardModel Rewards { get; set; } = new RewardModel();
 
         public void Validate()
@@ -28,6 +30,8 @@ namespace Valoris.Core.Contracts
                 throw new System.ArgumentOutOfRangeException(nameof(MinimumEpsilon));
             if (!IsFinite(EpsilonDecay) || EpsilonDecay <= 0 || EpsilonDecay > 1)
                 throw new System.ArgumentOutOfRangeException(nameof(EpsilonDecay));
+            if (!System.Enum.IsDefined(typeof(AgentDifficulty), Difficulty))
+                throw new System.ArgumentOutOfRangeException(nameof(Difficulty));
             if (Rewards == null) throw new System.ArgumentNullException(nameof(Rewards));
             Rewards.Validate();
         }

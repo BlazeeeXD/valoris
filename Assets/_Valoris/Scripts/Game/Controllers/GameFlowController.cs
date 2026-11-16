@@ -13,10 +13,16 @@ public class GameFlowController : MonoBehaviour
 {
     [Header("Training")]
     [SerializeField, Min(1)] private int episodesPerLevel = 3000;
+    [SerializeField, Min(1)] private int normalEpisodesPerLevel = 500;
     [SerializeField, Min(1)] private int maxStepsPerEpisode = 300;
     [SerializeField, Min(1)] private int evaluationMaxSteps = 300;
+    [SerializeField, Min(1)] private int easyEvaluationMaxSteps = 230;
     [SerializeField] private int campaignSeed = 12345;
     [SerializeField, Range(0.01f, 1f)] private float replayStepDelay = 0.075f;
+
+    [Header("Difficulty configuration")]
+    [SerializeField] private AgentDifficulty _difficulty = AgentDifficulty.Normal;
+    private bool _awaitingDifficultySelection = true;
 
     private ProceduralLevelGenerator _generator;
     private InventoryManager _inventory;
@@ -40,12 +46,93 @@ public class GameFlowController : MonoBehaviour
         Initialize();
         if (_generator != null && _generator.CurrentLevel != null)
             _session.BeginLevel(_generator.CurrentLevel);
+
+        // Prevent board interaction until the player selects a difficulty.
+        if (_placement != null)
+            _placement.placementEnabled = false;
+
         RefreshHud();
+    }
+
+    private void OnGUI()
+    {
+        if (!_initialized || !_awaitingDifficultySelection)
+            return;
+
+        float width = Mathf.Min(560f, Screen.width - 32f);
+        float height = 390f;
+        Rect panel = new Rect(
+            (Screen.width - width) * 0.5f,
+            (Screen.height - height) * 0.5f,
+            width,
+            height);
+
+        // Dim the board behind the selection panel.
+        Color previousColor = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.68f);
+        GUI.DrawTexture(
+            new Rect(0f, 0f, Screen.width, Screen.height),
+            Texture2D.whiteTexture);
+        GUI.color = previousColor;
+
+        GUI.Window(19427, panel, DrawDifficultyWindow, "Choose AI Difficulty");
+    }
+
+    private void DrawDifficultyWindow(int windowId)
+    {
+        GUILayout.Space(8f);
+        GUILayout.Label("Choose how much intelligence the AI uses.");
+        GUILayout.Label("Normal and Hard both retain contextual learning across levels.");
+        GUILayout.Space(12f);
+
+        string easyLabel = "EASY  -  Basic local navigator\nNo learning; " + Mathf.Min(evaluationMaxSteps, easyEvaluationMaxSteps) + "-move path limit";
+        if (GUILayout.Button(easyLabel, GUILayout.Height(72f)))
+            SelectDifficulty(AgentDifficulty.Easy);
+
+        string normalLabel = "NORMAL  -  Adaptive Q-learning\n" + normalEpisodesPerLevel + " episodes/level; contextual memory + loop guard";
+        if (GUILayout.Button(normalLabel, GUILayout.Height(72f)))
+            SelectDifficulty(AgentDifficulty.Normal);
+
+        string hardLabel = "HARD  -  Full adaptive AI\n" + episodesPerLevel + " episodes per level; full training budget";
+        if (GUILayout.Button(hardLabel, GUILayout.Height(72f)))
+            SelectDifficulty(AgentDifficulty.Hard);
+
+        GUILayout.Space(8f);
+        GUILayout.Label("Difficulty controls the AI mode and its path / training budget.");
+        GUI.DragWindow(new Rect(0f, 0f, 10000f, 24f));
+    }
+
+    private void SelectDifficulty(AgentDifficulty difficulty)
+    {
+        _difficulty = difficulty;
+        _awaitingDifficultySelection = false;
+
+        if (_placement != null)
+            _placement.placementEnabled = true;
+
+        string description = difficulty == AgentDifficulty.Easy
+            ? "Easy selected: basic local navigation; no learning."
+            : difficulty == AgentDifficulty.Normal
+                ? "Normal selected: adaptive Q-learning with " + normalEpisodesPerLevel + " episodes per level."
+                : "Hard selected: full adaptive AI with " + episodesPerLevel + " episodes per level.";
+
+        _hud?.SetStatus(description + " Place sabotage and lock the board.");
+    }
+
+    private int GetEpisodesForDifficulty()
+    {
+        switch (_difficulty)
+        {
+            case AgentDifficulty.Easy: return 1; // Required by option validation; Easy skips training.
+            case AgentDifficulty.Normal: return Mathf.Max(1, normalEpisodesPerLevel);
+            default: return Mathf.Max(1, episodesPerLevel);
+        }
     }
 
     private void Update()
     {
-        if (!_initialized || Keyboard.current == null || _session.IsTraining) return;
+        if (!_initialized || _awaitingDifficultySelection ||
+            Keyboard.current == null || _session.IsTraining) return;
         if (Keyboard.current.nKey.wasPressedThisFrame) StartNextLevel();
         if (Keyboard.current.rKey.wasPressedThisFrame && _campaign != null && _campaign.State.IsComplete)
             StartNewCampaign();
@@ -73,8 +160,13 @@ public class GameFlowController : MonoBehaviour
         if (_trainingUi == null) _trainingUi = gameObject.AddComponent<TrainingUIController>();
         _resultsUi = GetComponent<ResultsUIController>();
         if (_resultsUi == null) _resultsUi = gameObject.AddComponent<ResultsUIController>();
-        _inventoryUi = GetComponent<InventoryUIController>();
-        if (_inventoryUi == null) _inventoryUi = gameObject.AddComponent<InventoryUIController>();
+        _inventoryUi = FindObjectOfType<InventoryUIController>();
+
+        if (_inventoryUi == null)
+        {
+            Debug.LogError("GameFlowController: InventoryUIController not found in scene.");
+            return;
+        }
         _pathAnimator = GetComponent<AgentPathAnimator>();
         if (_pathAnimator == null) _pathAnimator = gameObject.AddComponent<AgentPathAnimator>();
 
@@ -93,7 +185,7 @@ public class GameFlowController : MonoBehaviour
         if (_generator.CurrentLevel != null)
         {
             _session.BeginLevel(_generator.CurrentLevel);
-            _inventory.ResetInventory(_generator.CurrentLevel.seed);
+            _inventory.ResetFirstRunInventory();
         }
 
         _hud.Initialize(_campaign, _inventory);
@@ -105,7 +197,7 @@ public class GameFlowController : MonoBehaviour
     public bool TryLockAndRun()
     {
         Initialize();
-        if (!_initialized || _session.IsTraining) return false;
+        if (!_initialized || _awaitingDifficultySelection || _session.IsTraining) return false;
         if (_campaign.State.IsComplete)
         {
             _hud.SetStatus("Campaign complete. Press R to start another campaign.");
@@ -147,14 +239,27 @@ public class GameFlowController : MonoBehaviour
     private async void TrainAndReplayAsync(LevelDefinition snapshot)
     {
         _session.IsTraining = true;
-        _trainingUi.ShowTraining(_campaign.State.CurrentLevel, episodesPerLevel);
-        _hud.SetStatus("Board locked. AI training is running off the Unity main thread.\nPlease wait for the final evaluation replay.");
+        int selectedEpisodeBudget = GetEpisodesForDifficulty();
+        int selectedEvaluationLimit = _difficulty == AgentDifficulty.Easy
+            ? Mathf.Min(evaluationMaxSteps, easyEvaluationMaxSteps)
+            : evaluationMaxSteps;
+        if (_difficulty == AgentDifficulty.Easy)
+        {
+            _trainingUi.ShowEasy(_campaign.State.CurrentLevel, selectedEvaluationLimit);
+            _hud.SetStatus("Easy mode: local heuristic is finding a route (" + selectedEvaluationLimit + "-move limit).");
+        }
+        else
+        {
+            _trainingUi.ShowTraining(_campaign.State.CurrentLevel, selectedEpisodeBudget);
+            _hud.SetStatus("Board locked. AI training is running off the Unity main thread.\nPlease wait for the final evaluation replay.");
+        }
 
         var options = new TrainingOptions
         {
-            EpisodesPerLevel = episodesPerLevel,
+            Difficulty = _difficulty,
+            EpisodesPerLevel = selectedEpisodeBudget,
             MaxStepsPerEpisode = maxStepsPerEpisode,
-            EvaluationMaxSteps = evaluationMaxSteps,
+            EvaluationMaxSteps = selectedEvaluationLimit,
             RandomSeed = unchecked(campaignSeed + _campaign.State.CurrentLevel * 31)
         };
 
@@ -164,7 +269,7 @@ public class GameFlowController : MonoBehaviour
             TrainingResult result = await Task.Run(() => _integration.TrainLockedLevel(snapshot, options));
             if (this == null) return;
             _session.Complete(result);
-            _trainingUi.ShowCompleted(result);
+            _trainingUi.ShowCompleted(result, _difficulty);
             StartCoroutine(TrainingPlayback.Play(_pathAnimator, result.FinalEvaluation,
                 () => CompleteLevel(result)));
         }
@@ -197,7 +302,11 @@ public class GameFlowController : MonoBehaviour
     public void StartNextLevel()
     {
         Initialize();
-        if (!_initialized || _session.IsTraining || !_campaign.CanStartNextLevel) return;
+        if (!_initialized || _awaitingDifficultySelection ||
+            _session.IsTraining || !_campaign.CanStartNextLevel) return;
+        if (!_campaign.State.AdvanceToNextLevel())
+        return;
+
         int level = _campaign.State.CurrentLevel;
         int seed = _campaign.GetSeedForLevel(level);
         _placement.ResetForNextLevel();
@@ -217,7 +326,7 @@ public class GameFlowController : MonoBehaviour
     public void StartNewCampaign()
     {
         Initialize();
-        if (!_initialized || _session.IsTraining) return;
+        if (!_initialized || _awaitingDifficultySelection || _session.IsTraining) return;
         campaignSeed = unchecked(campaignSeed + 1);
         _campaign.BeginCampaign(campaignSeed);
         _integration.BeginCampaign(campaignSeed);
@@ -227,7 +336,7 @@ public class GameFlowController : MonoBehaviour
         if (_generator.CurrentLevel != null)
         {
             _session.BeginLevel(_generator.CurrentLevel);
-            _inventory.ResetInventory(firstLevelSeed);
+            _inventory.ResetFirstRunInventory();
         }
         _hud.Refresh(_campaign.State, _inventory);
         _hud.SetStatus("New campaign started. Place sabotage and lock the board.\n" + _hud.GetInventoryHelp());

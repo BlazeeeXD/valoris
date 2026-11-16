@@ -11,7 +11,7 @@ The `Tests/Valoris.Core.Tests` project covers:
 | Procedural generation | `ProceduralMapGeneratorTests` |
 | Spatial/context encoders | `StateEncoderTests`, `ContextEncoderTests` |
 | Q-table and learning | `QLearningTests`, `QLearningUpdateTests`, `QTableTests`, `TransferPolicyTests` |
-| Training/evaluation | `EpisodeTests`, `EvaluationTests`, `AgentTrainingTests` |
+| Training/evaluation | `EpisodeTests`, `EvaluationTests`, `AgentTrainingTests`, `NormalModeLoopPreventionTests` |
 | Campaign memory | `MemoryPersistenceTests`, `DualMemoryTests` |
 | Options/reward validation | `TrainingOptionsValidationTests` |
 
@@ -28,7 +28,7 @@ dotnet test .\Tests\Valoris.Core.Tests\Valoris.Core.Tests.csproj
 `Assets/_Valoris/Tests/EditMode/Valoris.Game.Tests.asmdef` contains tests for:
 - A campaign lock being released after a score is recorded and the following level being lockable.
 - Campaign completion on first-to-eight and 15-level cap rules.
-- Deterministic Unity base-map generation, safe route invariants and non-corner endpoints.
+- Deterministic Unity base-map generation, safe route invariants, and the configured corner endpoints (0,0) to (23,23).
 - Level snapshot cloning, row-major mapping and BFS validation.
 - Placement endpoint protection, cell constraints and remove-only-player-placement behavior.
 - Seeded random inventory quantities and keyboard selection by CellType, independent of Inspector array order.
@@ -43,7 +43,7 @@ Run these in **Window → General → Test Runner → EditMode** after Unity fin
 4. Right-click a player-placed item. Confirm it is removed and its quantity is restored; base maze walls cannot be removed.
 5. Build a board that blocks every safe route. Lock must be rejected and placement must remain enabled.
 6. Restore a safe route and Lock Board. Confirm input cannot mutate the locked board.
-7. Confirm AI training runs, then the final evaluation path is replayed; success is green and failure red.
+7. Confirm AI training runs, then the final evaluation path is replayed; success is green and failure red. Easy should stop at its 230-step evaluation cap; Normal should escape short two-position loops when an alternate legal move exists; Hard should retain the original greedy evaluation.
 8. Confirm the correct side receives a point. Press N and verify the next level is editable and lockable (this catches campaign-lock lifecycle regressions).
 9. Complete a campaign or use a test seed; confirm first-to-eight / level-15 completion, and R starts a fresh campaign with fresh AI memory.
 10. Build a standalone Windows player and verify the same loop using the `MainGame` build scene.

@@ -75,3 +75,8 @@ These are initial experiment parameters; do not tune them without recording the 
 ## Evaluation discipline
 
 A single run cannot establish transfer quality. Compare reset-memory and persistent-context agents on the exact same map sequence, episode budget and seed. Repeat over multiple run seeds. Report success rate, evaluation steps, reward and memory size. A positive average on a fixture set is evidence for that set only; test procedurally generated maps before making a generalization claim.
+
+
+## Gameplay difficulty (Oralis integration)
+
+Easy uses a local greedy heuristic over the four adjacent cells. It does not train a Q-table, search the complete map, or transfer knowledge between levels. Normal and Hard both use the adaptive spatial/contextual Q-learning policy. The spatial table resets at the start of every level, while the contextual table persists for the campaign. Normal defaults to 500 training episodes per level; Hard defaults to the existing 3,000. The learning algorithm and update equation are unchanged between these modes. These budgets are tuning starting points, not guaranteed win-rate bands. See `QUICK_START_DIFFICULTY.md` for Unity setup and tuning.

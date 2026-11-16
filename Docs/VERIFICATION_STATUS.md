@@ -1,27 +1,29 @@
-# Verification status for this source package
+# Verification status for the merged difficulty build
 
-## Assembly work completed
+## Included in this archive
 
-- Merged the latest uploaded Unity project as the source of truth for scenes, tiles, ScriptableObjects, project settings and A-owned gameplay work.
-- Added the missing Core/CLI/test source from the completed B-side implementation, including adaptive two-layer transfer and paired multi-seed benchmarks.
-- Completed the Unity loop across map generation, randomized loadout, placement/removal, lock, validation, asynchronous training, final path replay, results and campaign scoring.
-- Fixed the campaign board-lock lifecycle so a completed level releases the campaign lock for the next level.
-- Corrected build settings to start `Assets/_Valoris/Scenes/MainGame.unity` rather than Unity's default `SampleScene`.
-- Made Unity maze generation honour arbitrary configured endpoints while retaining a seeded safe path.
-- Made item selection and HUD hotkeys use shared CellType IDs rather than ScriptableObject array position; this fixes the uploaded scene's Mud/Trap/Wall ordering mismatch.
-- Updated all three item ScriptableObjects from the old `Assembly-CSharp::ItemDefinition` identifier to `Valoris.Game::ItemDefinition`, matching the new gameplay assembly.
-- Removed the stale UI InputActionAsset GUID from the EventSystem and added the Input System default-action fallback at startup.
-- Kept the uploaded Unity Editor version (`6000.5.9f1`) and package manifest, and set `MainGame.unity` as the first build scene.
-- Made CLI training CSVs include map/run seeds, hyperparameters, reward values, episode metrics and final evaluation fields.
-- Made round completion robust when an evaluation path is empty, and prevented unassigned EditMode test inventories from logging Awake warnings.
-- Removed unused TODO stubs; added Core and Unity gameplay regression tests and updated docs.
+- Complete Unity project, scene, project settings, packages, AI Core, CLI, fixtures, tests, and benchmark tooling.
+- A's updated Unity generation code: seeded randomized depth-first maze carving plus opened loops / alternative routes, with corresponding procedural-level-generator and campaign progression changes.
+- A's non-Wall-Breaker Unity / UI changes, including the updated scene and inventory UI.
+- Original four-action AI contract restored. The Wall Breaker actions, state flags, special validation path, evaluator animation handling, and Wall Breaker-specific tests have been removed.
+- Original adaptive dual-memory Q-learning remains in place. Spatial memory resets between levels; contextual memory persists across a campaign and resets at a new campaign.
+- Easy / Normal / Hard selection overlay. Easy uses a deliberately weak local greedy heuristic (distance + small 0.25 revisit cost) without Q-learning and a 230-step evaluation cap by default. Normal uses the original dual-memory adaptive Q-learning agent with 500 episodes per level and persistent contextual memory; its final replay includes an 8-step recent-position loop guard that only overrides a move when the greedy choice would revisit a recent tile and another legal alternative exists. Hard keeps the original greedy evaluator and agent with 3,000 episodes per level.
+- `Directory.Build.props` redirects the Core .NET build output to `.dotnet` outside the Unity package folder. The Unity compilation cleanup script is included for stale local `bin` / `obj` artifacts.
+- Unused C# TODO placeholders and the unsafe cleanup script that removed the active `BenchmarkCommand.cs` have been omitted.
 
-## Checks performed in the packaging environment
+## Static checks performed for this archive
 
-Static file/data checks performed at packaging time: JSON/assembly-definition parsing, project XML parsing, package-manifest/lock consistency, Unity asset GUID uniqueness and `.meta` coverage, scene script resolution, main build-scene resolution, map fixture/BFS validation, Core Unity-reference isolation, C# delimiter/string/comment structural checks, and Python benchmark-analyzer compile/smoke checks. These checks do not replace a C# compiler or Unity import.
+- Removed-feature audit: no Wall Breaker action, state, or environment symbols remain in the source code.
+- Project file and configuration inspection: Core `.csproj`, `Directory.Build.props`, package manifest / lock file, and Unity assembly definitions were inspected for consistency.
+- Difficulty wiring inspection: the selected mode flows from the Unity difficulty menu through `TrainingOptions` into `ValorisAgent`; Easy branches to the local heuristic and gets a shorter evaluation cap, while Normal / Hard use the adaptive transfer learner. The short-loop replay guard is enabled only for Normal.
+- Core tests include Easy skipping Q-learning updates, Normal cross-level memory persistence, and a new regression test proving that Normal final evaluation breaks a deliberate two-position oscillation when an alternate route exists.
+- Static project audit after this balance patch: all 8 JSON files and 4 MSBuild XML files parsed; all 4 Unity `.asmdef` files also parsed as JSON; 110 C# files passed a delimiter-balance smoke check; 235 Unity `.meta` GUIDs were unique; no missing `.csproj` project references were found. This is a static consistency check, not a C# compile.
+- The Core action contract and Q-table remain four-action; the CLI `BenchmarkCommand.cs` remains present. The unsafe stub-removal script is not included.
 
 ## Checks not performed here
 
-This environment does not have the .NET SDK or Unity Editor. Therefore no fresh `dotnet build`, `dotnet test`, Unity script compilation, EditMode test run, PlayMode test run or standalone player build is claimed for this exact archive. Run `Docs/TEST_PLAN.md` on the development PC before treating the project as release-ready.
+The packaging environment does not have `dotnet`, a C# compiler, or the Unity Editor available. Therefore this exact archive has **not** been freshly compiled, xUnit-tested, imported by Unity, run in Play Mode, or built as a player. The earlier V0.1 report of 60 passing Core tests is historical and must not be treated as verification of this merged archive. Run `QUICK_START_DIFFICULTY.md` and `Docs/TEST_PLAN.md` on the Windows development machine before treating the package as verified.
 
-Historical B1 numbers in `Docs/EXPERIMENTS.md` are copied from the supplied development log and are not claimed as a result of this package's current source revision.
+## Generation note
+
+The current A-side maze generator creates a seeded DFS maze and opens a fraction of remaining internal connections to add loops. The shipped gameplay configuration and the updated EditMode tests use the default corner endpoints: start `(0,0)`, goal `(23,23)`. Do not assume arbitrary inspector endpoints are guaranteed to connect without further validation/testing.
