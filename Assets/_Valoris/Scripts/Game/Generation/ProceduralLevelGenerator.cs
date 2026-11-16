@@ -55,7 +55,7 @@ public class ProceduralLevelGenerator : MonoBehaviour
             return;
         }
 
-        bool[,] walls = mazeGenerator.GenerateMaze(width, height, seed, start, goal);
+        bool[,] walls = mazeGenerator.GenerateMaze(width, height, seed);
         if (walls == null || !mazeGenerator.HasSafePath(walls, start, goal))
         {
             Debug.LogError("Level generation failed: no safe route exists from start to goal.");

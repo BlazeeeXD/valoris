@@ -1,3 +1,4 @@
+
 namespace Valoris.Core.Contracts
 {
     public sealed class EpisodeMetric
@@ -8,5 +9,9 @@ namespace Valoris.Core.Contracts
         public bool ReachedGoal { get; set; }
         public double Epsilon { get; set; }
         public TerminationReason TerminationReason { get; set; }
+
+        // Wall Breaker diagnostics.
+        public int WallBreakerUses { get; set; }
+        public int SuccessfulWallBreaks { get; set; }
     }
 }

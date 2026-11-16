@@ -12,6 +12,9 @@ public class MazeGenerator : MonoBehaviour
         new Vector2Int(-1, 0)
     };
 
+    // Percentage of remaining internal walls to open.
+    private const float LoopOpeningFraction = 0.25f;
+
     public bool[,] GenerateMaze(int width, int height, int seed)
     {
         if (width < 5 || height < 5)
@@ -98,6 +101,9 @@ public class MazeGenerator : MonoBehaviour
             stack.Push(chosen);
         }
 
+        // Add loops and alternative routes.
+        AddLoops(walls, columns, rows, random);
+
         // Entrance connecting to the top-left corner.
         walls[0, 0] = false;
         walls[1, 0] = false;
@@ -114,9 +120,87 @@ public class MazeGenerator : MonoBehaviour
         for (int y = lastCell.y; y < height; y++)
             walls[width - 1, y] = false;
 
-        Debug.Log($"DFS maze generated. Seed: {seed}");
+        Debug.Log($"DFS maze generated with loops. Seed: {seed}");
 
         return walls;
+    }
+
+    private void AddLoops(
+        bool[,] walls,
+        int columns,
+        int rows,
+        System.Random random)
+    {
+        List<Vector2Int> candidates = new List<Vector2Int>();
+
+        // Find closed connections between horizontally
+        // and vertically adjacent logical cells.
+        for (int x = 0; x < columns; x++)
+        {
+            for (int y = 0; y < rows; y++)
+            {
+                Vector2Int current = ToGridPosition(
+                    new Vector2Int(x, y)
+                );
+
+                // Check connection to the right.
+                if (x + 1 < columns)
+                {
+                    Vector2Int right = ToGridPosition(
+                        new Vector2Int(x + 1, y)
+                    );
+
+                    Vector2Int middle = new Vector2Int(
+                        (current.x + right.x) / 2,
+                        (current.y + right.y) / 2
+                    );
+
+                    if (walls[middle.x, middle.y])
+                        candidates.Add(middle);
+                }
+
+                // Check connection below.
+                if (y + 1 < rows)
+                {
+                    Vector2Int below = ToGridPosition(
+                        new Vector2Int(x, y + 1)
+                    );
+
+                    Vector2Int middle = new Vector2Int(
+                        (current.x + below.x) / 2,
+                        (current.y + below.y) / 2
+                    );
+
+                    if (walls[middle.x, middle.y])
+                        candidates.Add(middle);
+                }
+            }
+        }
+
+        // Shuffle candidates using Fisher-Yates.
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+
+            Vector2Int temp = candidates[i];
+            candidates[i] = candidates[j];
+            candidates[j] = temp;
+        }
+
+        // Open approximately 25% of remaining connections.
+        int loopsToOpen = Mathf.RoundToInt(
+            candidates.Count * LoopOpeningFraction
+        );
+
+        for (int i = 0; i < loopsToOpen; i++)
+        {
+            Vector2Int position = candidates[i];
+            walls[position.x, position.y] = false;
+        }
+
+        Debug.Log(
+            $"Maze loops added: {loopsToOpen}/{candidates.Count} possible connections."
+        );
     }
 
     private void CarveCell(bool[,] walls, Vector2Int logicalPosition)

@@ -13,12 +13,15 @@ namespace Valoris.Core.Learning
         private readonly Dictionary<int, int[]> _visits =
             new Dictionary<int, int[]>();
 
+        private const int ActionCount = ActionAvailability.ActionCount;
+
         public int LearnedStateCount => _values.Count;
-        public int EntryCount => _values.Count * 4;
+        public int EntryCount => _values.Count * ActionCount;
 
         public double GetValue(int state, int action)
         {
             ValidateAction(action);
+
             return _values.TryGetValue(state, out double[] values)
                 ? values[action]
                 : 0.0;
@@ -27,15 +30,12 @@ namespace Valoris.Core.Learning
         public int GetVisitCount(int state, int action)
         {
             ValidateAction(action);
+
             return _visits.TryGetValue(state, out int[] counts)
                 ? counts[action]
                 : 0;
         }
 
-        /// <summary>
-        /// Returns the maximum value over all actions.
-        /// Use the observation overload during grid learning.
-        /// </summary>
         public double GetMaxValue(int state)
         {
             if (!_values.TryGetValue(state, out double[] values))
@@ -52,10 +52,6 @@ namespace Valoris.Core.Learning
             return max;
         }
 
-        /// <summary>
-        /// Returns the maximum Q value among actions that do not
-        /// enter walls or leave the board.
-        /// </summary>
         public double GetMaxValue(
             int state,
             GridObservation observation)
@@ -66,7 +62,7 @@ namespace Valoris.Core.Learning
             double max = double.NegativeInfinity;
             bool found = false;
 
-            for (int action = 0; action < 4; action++)
+            for (int action = 0; action < ActionCount; action++)
             {
                 if (!ActionAvailability.IsAvailable(observation, action))
                     continue;
@@ -108,13 +104,13 @@ namespace Valoris.Core.Learning
 
             if (!_values.TryGetValue(state, out double[] values))
             {
-                values = new double[4];
+                values = new double[ActionCount];
                 _values.Add(state, values);
             }
 
             if (!_visits.TryGetValue(state, out int[] counts))
             {
-                counts = new int[4];
+                counts = new int[ActionCount];
                 _visits.Add(state, counts);
             }
 
@@ -134,9 +130,6 @@ namespace Valoris.Core.Learning
             return updated;
         }
 
-        /// <summary>
-        /// Selects randomly among equal-valued legal actions.
-        /// </summary>
         public int SelectGreedyAction(
             int state,
             GridObservation observation,
@@ -153,10 +146,10 @@ namespace Valoris.Core.Learning
             _values.TryGetValue(state, out double[] values);
 
             double max = double.NegativeInfinity;
-            int[] ties = new int[4];
+            int[] ties = new int[ActionCount];
             int tieCount = 0;
 
-            for (int action = 0; action < 4; action++)
+            for (int action = 0; action < ActionCount; action++)
             {
                 if (!ActionAvailability.IsAvailable(observation, action))
                     continue;
@@ -180,7 +173,7 @@ namespace Valoris.Core.Learning
                 : ties[random.Next(tieCount)];
         }
 
-        // Kept for diagnostics and tests that inspect an unmasked action vector.
+        // Unmasked selection retained for diagnostics and compatibility.
         public int SelectGreedyAction(
             int state,
             Random random,
@@ -190,7 +183,7 @@ namespace Valoris.Core.Learning
                 throw new ArgumentNullException(nameof(random));
 
             if (!_values.TryGetValue(state, out double[] values))
-                return randomizeTies ? random.Next(4) : 0;
+                return randomizeTies ? random.Next(ActionCount) : 0;
 
             double max = values[0];
 
@@ -228,7 +221,7 @@ namespace Valoris.Core.Learning
 
         private static void ValidateAction(int action)
         {
-            if (action < 0 || action >= 4)
+            if (action < 0 || action >= ActionCount)
                 throw new ArgumentOutOfRangeException(nameof(action));
         }
     }

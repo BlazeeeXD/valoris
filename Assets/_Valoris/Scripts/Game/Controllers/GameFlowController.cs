@@ -93,7 +93,7 @@ public class GameFlowController : MonoBehaviour
         if (_generator.CurrentLevel != null)
         {
             _session.BeginLevel(_generator.CurrentLevel);
-            _inventory.ResetInventory(_generator.CurrentLevel.seed);
+            _inventory.ResetFirstRunInventory();
         }
 
         _hud.Initialize(_campaign, _inventory);
@@ -227,7 +227,7 @@ public class GameFlowController : MonoBehaviour
         if (_generator.CurrentLevel != null)
         {
             _session.BeginLevel(_generator.CurrentLevel);
-            _inventory.ResetInventory(firstLevelSeed);
+            _inventory.ResetFirstRunInventory();
         }
         _hud.Refresh(_campaign.State, _inventory);
         _hud.SetStatus("New campaign started. Place sabotage and lock the board.\n" + _hud.GetInventoryHelp());

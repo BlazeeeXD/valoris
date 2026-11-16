@@ -1,3 +1,4 @@
+
 using System;
 using Valoris.Core.Contracts;
 using Valoris.Core.Grid;
@@ -29,8 +30,9 @@ namespace Valoris.Core.Training
             GridObservation observation = environment.Observe();
 
             double totalReward = 0.0;
-
             int steps = 0;
+            int wallBreakerUses = 0;
+            int successfulWallBreaks = 0;
 
             bool reachedGoal = false;
 
@@ -49,11 +51,20 @@ namespace Valoris.Core.Training
                     break;
                 }
 
-                StepResult transition = environment.Step(
-                    (MoveAction)action);
+                MoveAction selectedAction = (MoveAction)action;
+
+                StepResult transition = environment.Step(selectedAction);
+
+                if (selectedAction == MoveAction.BreakUp ||
+                    selectedAction == MoveAction.BreakRight ||
+                    selectedAction == MoveAction.BreakDown ||
+                    selectedAction == MoveAction.BreakLeft)
+                {
+                    wallBreakerUses++;
+                    successfulWallBreaks++;
+                }
 
                 double reward = transition.Reward;
-
                 bool terminal = transition.IsTerminal;
 
                 reason = transition.TerminationReason;
@@ -61,13 +72,10 @@ namespace Valoris.Core.Training
                 if (!terminal && step == options.MaxStepsPerEpisode)
                 {
                     reward += options.Rewards.TimeoutPenalty;
-
                     terminal = true;
-
                     reason = TerminationReason.StepLimit;
                 }
 
-                // Update spatial and contextual memories.
                 policy.Learn(
                     observation,
                     action,
@@ -80,9 +88,7 @@ namespace Valoris.Core.Training
                 onUpdate?.Invoke();
 
                 totalReward += reward;
-
                 observation = transition.Observation;
-
                 steps = step;
 
                 reachedGoal =
@@ -99,7 +105,9 @@ namespace Valoris.Core.Training
                 Steps = steps,
                 ReachedGoal = reachedGoal,
                 Epsilon = epsilon,
-                TerminationReason = reason
+                TerminationReason = reason,
+                WallBreakerUses = wallBreakerUses,
+                SuccessfulWallBreaks = successfulWallBreaks
             };
         }
     }

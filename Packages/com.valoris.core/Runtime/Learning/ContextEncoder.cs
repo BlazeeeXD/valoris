@@ -1,15 +1,18 @@
+
 using System;
 using Valoris.Core.Contracts;
 
 namespace Valoris.Core.Learning
 {
     /// <summary>
-    /// Encodes reusable environmental context without absolute coordinates.
-    /// The same local environment can therefore share experience across maps.
+    /// Encodes reusable environmental context, including nearby wall
+    /// ownership and Wall Breaker availability, without absolute coordinates.
     /// </summary>
     public sealed class ContextEncoder
     {
-        public const int NeighbourPatternCount = 4 * 4 * 4 * 4;
+        public const int NeighbourPatternCount =
+            4 * 4 * 4 * 4 * 2 * 2 * 2 * 2 * 2;
+
         public const int GoalContextCount = 3 * 3 * 3;
 
         public const int StateCount =
@@ -20,16 +23,23 @@ namespace Valoris.Core.Learning
             ValidatePosition(observation.Position, nameof(observation));
             ValidatePosition(observation.Goal, nameof(observation));
 
+            ValidateCell(observation.North);
+            ValidateCell(observation.East);
+            ValidateCell(observation.South);
+            ValidateCell(observation.West);
+
             int code = (int)observation.North;
 
             code = code * 4 + (int)observation.East;
             code = code * 4 + (int)observation.South;
             code = code * 4 + (int)observation.West;
 
-            ValidateCell(observation.North);
-            ValidateCell(observation.East);
-            ValidateCell(observation.South);
-            ValidateCell(observation.West);
+            code = code * 2 + Flag(observation.NorthIsPlayerWall);
+            code = code * 2 + Flag(observation.EastIsPlayerWall);
+            code = code * 2 + Flag(observation.SouthIsPlayerWall);
+            code = code * 2 + Flag(observation.WestIsPlayerWall);
+
+            code = code * 2 + Flag(observation.WallBreakerAvailable);
 
             int dx = Sign(
                 observation.Goal.X - observation.Position.X);
@@ -52,13 +62,21 @@ namespace Valoris.Core.Learning
             return code;
         }
 
-        private static void ValidatePosition(GridPosition position, string name)
+        private static int Flag(bool value)
+        {
+            return value ? 1 : 0;
+        }
+
+        private static void ValidatePosition(
+            GridPosition position,
+            string name)
         {
             if (position.X < 0 || position.Y < 0 ||
                 position.X >= LevelDefinition.CampaignWidth ||
                 position.Y >= LevelDefinition.CampaignHeight)
             {
-                throw new ArgumentOutOfRangeException(name,
+                throw new ArgumentOutOfRangeException(
+                    name,
                     "Observation coordinates must be inside the 24 x 24 campaign grid.");
             }
         }
