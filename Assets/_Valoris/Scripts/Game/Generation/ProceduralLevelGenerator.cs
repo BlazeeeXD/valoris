@@ -1,13 +1,13 @@
-
 using UnityEngine;
 
+/// <summary>Unity-facing seeded maze generator. The generated board is still editable until lock.</summary>
 public class ProceduralLevelGenerator : MonoBehaviour
 {
     [Header("Generation Settings")]
-    public int width = 24;
-    public int height = 24;
+    [Min(1)] public int width = 24;
+    [Min(1)] public int height = 24;
     public int seed = 12345;
-    public int levelNumber = 1;
+    [Min(1)] public int levelNumber = 1;
 
     [Header("Level Coordinates")]
     public Vector2Int start = new Vector2Int(0, 0);
@@ -21,55 +21,56 @@ public class ProceduralLevelGenerator : MonoBehaviour
 
     private void Start()
     {
-        GenerateLevel();
+        // GameFlowController may already have generated the first level. Do not overwrite it.
+        if (CurrentLevel == null) GenerateLevel();
     }
 
     public void GenerateLevel()
     {
+        GenerateLevel(levelNumber, seed);
+    }
+
+    public void GenerateLevel(int requestedLevelNumber, int requestedSeed)
+    {
+        CurrentLevel = null;
+        if (mazeGenerator == null) mazeGenerator = FindObjectOfType<MazeGenerator>();
+        if (gridManager == null) gridManager = FindObjectOfType<GridManager>();
         if (mazeGenerator == null || gridManager == null)
         {
-            Debug.LogError("ProceduralLevelGenerator: Missing references!");
+            Debug.LogError("ProceduralLevelGenerator: MazeGenerator or GridManager reference is missing.");
+            return;
+        }
+        if (width != 24 || height != 24)
+        {
+            Debug.LogError("ProceduralLevelGenerator: the first release requires a 24 x 24 board.");
             return;
         }
 
-        bool[,] walls = mazeGenerator.GenerateMaze(width, height, seed);
-
-        if (!mazeGenerator.HasSafePath(walls, start, goal))
+        levelNumber = requestedLevelNumber;
+        seed = requestedSeed;
+        if (start == goal || start.x < 0 || start.y < 0 || start.x >= width || start.y >= height ||
+            goal.x < 0 || goal.y < 0 || goal.x >= width || goal.y >= height)
         {
-            Debug.LogError("Level generation failed: No safe path exists!");
+            Debug.LogError("ProceduralLevelGenerator: start and goal must be distinct cells inside the board.");
             return;
         }
 
-        CurrentLevel = new GeneratedLevelData(
-            width, height, seed, start, goal
-        );
-
-        CurrentLevel.levelNumber = levelNumber;
-
-        int wallCount = 0;
-
-        for (int y = 0; y < height; y++)
+        bool[,] walls = mazeGenerator.GenerateMaze(width, height, seed, start, goal);
+        if (walls == null || !mazeGenerator.HasSafePath(walls, start, goal))
         {
-            for (int x = 0; x < width; x++)
-            {
-                byte cellValue = walls[x, y] ? (byte)1 : (byte)0;
-
-                CurrentLevel.SetCell(x, y, cellValue);
-
-                if (walls[x, y])
-                    wallCount++;
-            }
+            Debug.LogError("Level generation failed: no safe route exists from start to goal.");
+            CurrentLevel = null;
+            return;
         }
 
+        CurrentLevel = LevelBuilder.FromWalls(walls, levelNumber, seed, start, goal);
         gridManager.GenerateGrid(walls, start, goal);
 
-        Debug.Log("BFS validation successful.");
-        Debug.Log($"Level: {CurrentLevel.levelNumber}");
-        Debug.Log($"Seed: {CurrentLevel.seed}");
-        Debug.Log($"Dimensions: {width}x{height}");
-        Debug.Log($"Walls: {wallCount}");
-        Debug.Log($"Start: {CurrentLevel.start}");
-        Debug.Log($"Goal: {CurrentLevel.goal}");
-        Debug.Log($"Cell data count: {CurrentLevel.cells.Length}");
+        int wallCount = 0;
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            if (walls[x, y]) wallCount++;
+
+        Debug.Log($"Generated level {levelNumber} (seed {seed}, {width}x{height}, {wallCount} walls). BFS safe path: PASS.");
     }
 }

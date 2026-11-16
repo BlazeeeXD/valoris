@@ -1,42 +1,34 @@
+using System;
+using Valoris.Core.Contracts;
 
-using UnityEngine;
-
+/// <summary>Converts the mutable Unity board to an immutable AI contract snapshot.</summary>
 public static class LevelSnapshotFactory
 {
-    public static GeneratedLevelData CreateSnapshot(
-        GeneratedLevelData source)
+    public static LevelDefinition Create(GeneratedLevelData source)
     {
-        if (source == null)
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (source.width != LevelDefinition.CampaignWidth || source.height != LevelDefinition.CampaignHeight)
+            throw new ArgumentException("The first release requires a 24 x 24 board.", nameof(source));
+        if (source.cells == null || source.cells.Length != source.width * source.height)
+            throw new ArgumentException("Cell array length does not match width x height.", nameof(source));
+
+        var cells = new int[source.cells.Length];
+        for (int i = 0; i < source.cells.Length; i++)
         {
-            Debug.LogError("LevelSnapshotFactory: Source level is null!");
-            return null;
+            byte value = source.cells[i];
+            if (value > (byte)CellType.Mud)
+                throw new ArgumentException("Unknown cell type " + value + " at row-major index " + i + ".", nameof(source));
+            cells[i] = value;
         }
 
-        if (source.cells == null ||
-            source.cells.Length != source.width * source.height)
-        {
-            Debug.LogError("LevelSnapshotFactory: Invalid cell data!");
-            return null;
-        }
-
-        GeneratedLevelData snapshot = new GeneratedLevelData(
+        return new LevelDefinition(
+            source.schemaVersion,
+            source.levelNumber,
+            source.seed,
             source.width,
             source.height,
-            source.seed,
-            source.start,
-            source.goal
-        );
-
-        snapshot.schemaVersion = source.schemaVersion;
-        snapshot.levelNumber = source.levelNumber;
-
-        snapshot.cells = (byte[])source.cells.Clone();
-
-        snapshot.playerPlacedItems =
-            source.playerPlacedItems != null
-            ? (bool[])source.playerPlacedItems.Clone()
-            : null;
-
-        return snapshot;
+            cells,
+            new GridPosition(source.start.x, source.start.y),
+            new GridPosition(source.goal.x, source.goal.y));
     }
 }

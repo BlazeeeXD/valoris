@@ -1,41 +1,21 @@
+using Valoris.Core.Contracts;
 
-using System;
-
-[Serializable]
-public class GameSession
+/// <summary>Per-level data passed between gameplay, integration and presentation.</summary>
+public sealed class GameSession
 {
-    public int currentLevel = 1;
+    public GeneratedLevelData MutableLevel { get; private set; }
+    public LevelDefinition LockedSnapshot { get; private set; }
+    public TrainingResult LastTrainingResult { get; private set; }
+    public bool IsTraining { get; set; }
 
-    public bool isCampaignActive = false;
-    public bool isCampaignComplete = false;
-
-    public void StartSession()
+    public void BeginLevel(GeneratedLevelData level)
     {
-        currentLevel = 1;
-
-        isCampaignActive = true;
-        isCampaignComplete = false;
+        MutableLevel = level;
+        LockedSnapshot = null;
+        LastTrainingResult = null;
+        IsTraining = false;
     }
 
-    public void RecordLevelResult(bool campaignOver)
-    {
-        if (!isCampaignActive || isCampaignComplete)
-            return;
-
-        if (campaignOver)
-        {
-            isCampaignComplete = true;
-            isCampaignActive = false;
-        }
-        else
-        {
-            currentLevel++;
-        }
-    }
-
-    public void EndSession()
-    {
-        isCampaignActive = false;
-        isCampaignComplete = true;
-    }
+    public void Lock(LevelDefinition snapshot) => LockedSnapshot = snapshot;
+    public void Complete(TrainingResult result) => LastTrainingResult = result;
 }

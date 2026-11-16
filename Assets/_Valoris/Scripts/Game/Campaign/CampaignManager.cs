@@ -1,72 +1,30 @@
-
 using UnityEngine;
 
+/// <summary>Owns campaign score and level progression. The AI never awards points itself.</summary>
 public class CampaignManager : MonoBehaviour
 {
-    [Header("Campaign Settings")]
-    [SerializeField] private int maxLevels = CampaignRules.MaxCampaignLevels;
-    [SerializeField] private int winsRequired = CampaignRules.WinsRequired;
+    [SerializeField, Min(1)] private int maxLevels = CampaignRules.DefaultLevelCount;
+    [SerializeField] private int campaignSeed = 12345;
 
-    [Header("Campaign Score")]
-    [SerializeField] private int playerScore;
-    [SerializeField] private int aiScore;
-    [SerializeField] private int levelsCompleted;
+    public CampaignState State { get; private set; } = new CampaignState();
+    public int CampaignSeed => campaignSeed;
 
-    public int PlayerScore => playerScore;
-    public int AIScore => aiScore;
-    public int LevelsCompleted => levelsCompleted;
-
-    public bool IsCampaignOver =>
-        playerScore >= winsRequired ||
-        aiScore >= winsRequired ||
-        levelsCompleted >= maxLevels;
-
-    public void BeginCampaign()
+    public void BeginCampaign(int seed)
     {
-        playerScore = 0;
-        aiScore = 0;
-        levelsCompleted = 0;
-
-        Debug.Log("Campaign started!");
+        campaignSeed = seed;
+        State = new CampaignState();
+        State.BeginCampaign(seed, maxLevels);
     }
 
-    public void CompleteLevel(bool aiReachedGoal)
+    public void RecordLevelResult(bool aiReachedGoal)
     {
-        if (IsCampaignOver)
-        {
-            Debug.LogWarning("Campaign is already over.");
-            return;
-        }
+        State.RecordLevelResult(aiReachedGoal);
+    }
 
-        if (aiReachedGoal)
-        {
-            aiScore++;
-            Debug.Log("AI successfully reached the goal. AI gets a point.");
-        }
-        else
-        {
-            playerScore++;
-            Debug.Log("AI failed to reach the goal. Player gets a point.");
-        }
+    public bool CanStartNextLevel => !CampaignRules.IsCampaignComplete(State) && State.CompletedLevels < State.MaxLevels;
 
-        levelsCompleted++;
-
-        Debug.Log(
-            $"Level {levelsCompleted} completed. " +
-            $"Player: {playerScore} | AI: {aiScore}"
-        );
-
-        if (IsCampaignOver)
-        {
-            Debug.Log("CAMPAIGN OVER!");
-
-            if (playerScore >= winsRequired)
-                Debug.Log("PLAYER WINS THE CAMPAIGN!");
-            else if (aiScore >= winsRequired)
-                Debug.Log("AI WINS THE CAMPAIGN!");
-            else
-                Debug.Log("Campaign ended after maximum levels.");
-        }
+    public int GetSeedForLevel(int levelNumber)
+    {
+        unchecked { return campaignSeed * 31 + levelNumber * 1009; }
     }
 }
-

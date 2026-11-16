@@ -1,0 +1,21 @@
+{
+  "name": "Valoris.Game.Tests",
+  "rootNamespace": "Valoris.Game.Tests",
+  "references": [
+    "Valoris.Game",
+    "Valoris.Core"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

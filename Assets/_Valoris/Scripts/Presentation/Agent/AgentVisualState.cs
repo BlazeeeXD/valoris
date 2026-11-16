@@ -1,1 +1,9 @@
-// TODO: Implement this component. See Docs/ARCHITECTURE.md and Docs/INTERFACE_CONTRACT.md.
+public enum AgentVisualState
+{
+    Hidden = 0,
+    Idle = 1,
+    Training = 2,
+    Moving = 3,
+    Success = 4,
+    Failure = 5
+}

@@ -1,12 +1,8 @@
 {
   "name": "com.valoris.core",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "displayName": "Valoris Core",
-  "description": "Engine-independent grid simulation and reinforcement-learning core for Valoris.",
-  "keywords": [
-    "valoris",
-    "gridworld",
-    "reinforcement-learning",
-    "q-learning"
-  ]
+  "description": "Headless grid simulation and tabular Q-learning core for Valoris.",
+  "unity": "6000.3",
+  "author": { "name": "Valoris Project Team" }
 }

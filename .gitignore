@@ -33,3 +33,9 @@ Desktop.ini
 # Logs and crash output
 *.log
 sysinfo.txt
+# Python analysis cache
+__pycache__/
+*.py[cod]
+
+# Redirected .NET Core build output (kept outside Unity Packages/)
+.dotnet/

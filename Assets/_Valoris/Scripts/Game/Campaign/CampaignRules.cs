@@ -1,43 +1,15 @@
-
 public static class CampaignRules
 {
-    public const int MaxCampaignLevels = 15;
+    public const int DefaultLevelCount = 15;
     public const int WinsRequired = 8;
 
-    public static bool HasPlayerWon(int playerScore)
+    public static bool IsCampaignComplete(CampaignState state)
     {
-        return playerScore >= WinsRequired;
+        if (state == null) return false;
+        return state.AiScore >= WinsRequired || state.PlayerScore >= WinsRequired ||
+               state.CompletedLevels >= state.MaxLevels;
     }
 
-    public static bool HasAIWon(int aiScore)
-    {
-        return aiScore >= WinsRequired;
-    }
-
-    public static bool IsCampaignOver(
-        int playerScore,
-        int aiScore,
-        int levelsCompleted)
-    {
-        return HasPlayerWon(playerScore) ||
-               HasAIWon(aiScore) ||
-               levelsCompleted >= MaxCampaignLevels;
-    }
-
-    public static bool IsValidScore(int score)
-    {
-        return score >= 0 && score <= MaxCampaignLevels;
-    }
-
-    public static bool CanStartNextLevel(
-        int playerScore,
-        int aiScore,
-        int levelsCompleted)
-    {
-        return !IsCampaignOver(
-            playerScore,
-            aiScore,
-            levelsCompleted
-        );
-    }
+    public static bool DidAiWin(CampaignState state)
+        => state != null && state.AiScore > state.PlayerScore;
 }

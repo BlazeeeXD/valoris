@@ -1,6 +1,6 @@
-
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 public class PlacementController : MonoBehaviour
 {
@@ -9,21 +9,26 @@ public class PlacementController : MonoBehaviour
     public ProceduralLevelGenerator levelGenerator;
     public GridManager gridManager;
     public Camera mainCamera;
-    public InventoryUIController inventoryUIController;
 
     [Header("Placement Settings")]
     public bool placementEnabled = true;
 
-    private CampaignState campaignState = new CampaignState();
+    private CampaignState placementState = new CampaignState();
+    private GameFlowController _flow;
 
-    // Independent copy of the final locked level.
-    public GeneratedLevelData LockedLevelSnapshot { get; private set; }
+    private void Awake()
+    {
+        if (inventoryManager == null) inventoryManager = FindObjectOfType<InventoryManager>();
+        if (levelGenerator == null) levelGenerator = FindObjectOfType<ProceduralLevelGenerator>();
+        if (gridManager == null) gridManager = FindObjectOfType<GridManager>();
+        if (mainCamera == null) mainCamera = Camera.main;
+        _flow = GetComponent<GameFlowController>();
+        if (_flow == null) _flow = gameObject.AddComponent<GameFlowController>();
+    }
 
     private void Update()
     {
-        if (!placementEnabled || campaignState.IsBoardLocked)
-            return;
-
+        if (!placementEnabled || placementState.IsBoardLocked) return;
         HandleItemSelection();
         HandlePlacement();
         HandleRemoval();
@@ -31,154 +36,81 @@ public class PlacementController : MonoBehaviour
 
     private void HandleItemSelection()
     {
-        if (Keyboard.current == null)
-            return;
-
-        if (Keyboard.current.digit1Key.wasPressedThisFrame)
-            SelectItem(0);
-
-        if (Keyboard.current.digit2Key.wasPressedThisFrame)
-            SelectItem(1);
-
-        if (Keyboard.current.digit3Key.wasPressedThisFrame)
-            SelectItem(2);
+        if (Keyboard.current == null || inventoryManager == null || inventoryManager.items == null) return;
+        if (Keyboard.current.digit1Key.wasPressedThisFrame) SelectItemByCellType(1); // Wall
+        if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectItemByCellType(2); // Trap
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectItemByCellType(3); // Mud
     }
 
-    private void SelectItem(int index)
+    private void SelectItemByCellType(byte cellType)
     {
-        if (inventoryManager == null ||
-            inventoryManager.items == null ||
-            index >= inventoryManager.items.Length)
-            return;
-
-        inventoryManager.SelectItem(inventoryManager.items[index]);
+        if (inventoryManager != null && inventoryManager.SelectItemByCellType(cellType))
+            NotifyInventoryChanged();
     }
 
     private void HandlePlacement()
     {
-        if (Mouse.current == null ||
-            !Mouse.current.leftButton.wasPressedThisFrame)
-            return;
-
-        if (!TryGetGridPosition(out Vector2Int position))
-            return;
-
-        if (levelGenerator == null ||
-            levelGenerator.CurrentLevel == null ||
-            inventoryManager == null)
-            return;
-
-        bool placed = inventoryManager.TryPlaceSelectedItem(
-            levelGenerator.CurrentLevel,
-            position
-        );
-
-        if (placed)
+        if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        if (!TryGetGridPosition(out Vector2Int position) || levelGenerator == null || levelGenerator.CurrentLevel == null || inventoryManager == null) return;
+        if (inventoryManager.TryPlaceSelectedItem(levelGenerator.CurrentLevel, position))
         {
-            byte cellType = levelGenerator.CurrentLevel.GetCell(
-                position.x, position.y
-            );
-
-            gridManager.RenderItem(position, cellType);
-
-             if (inventoryUIController != null)
-            inventoryUIController.RefreshInventory();
+            if (gridManager != null)
+                gridManager.RenderItem(position, levelGenerator.CurrentLevel.GetCell(position.x, position.y));
+            NotifyInventoryChanged();
         }
     }
 
     private void HandleRemoval()
     {
-        if (Mouse.current == null ||
-            !Mouse.current.rightButton.wasPressedThisFrame)
-            return;
-
-        if (!TryGetGridPosition(out Vector2Int position))
-            return;
-
-        if (levelGenerator == null ||
-            levelGenerator.CurrentLevel == null ||
-            inventoryManager == null ||
-            gridManager == null)
-            return;
-
-        bool removed = inventoryManager.TryRemoveItem(
-            levelGenerator.CurrentLevel,
-            position
-        );
-
-        if (removed)
+        if (Mouse.current == null || !Mouse.current.rightButton.wasPressedThisFrame) return;
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        if (!TryGetGridPosition(out Vector2Int position) || levelGenerator == null || levelGenerator.CurrentLevel == null || inventoryManager == null) return;
+        if (inventoryManager.TryRemoveItem(levelGenerator.CurrentLevel, position))
         {
-            gridManager.ClearItem(position);
-            if (inventoryUIController != null)
-            inventoryUIController.RefreshInventory();
-            Debug.Log($"Removed player-placed item at {position}");
+            if (gridManager != null) gridManager.ClearItem(position);
+            NotifyInventoryChanged();
         }
     }
 
     private bool TryGetGridPosition(out Vector2Int position)
     {
         position = Vector2Int.zero;
-
-        if (mainCamera == null || gridManager == null ||
-            gridManager.groundTilemap == null ||
-            Mouse.current == null)
-            return false;
-
-        Vector2 mousePosition = Mouse.current.position.ReadValue();
-
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(
-            new Vector3(mousePosition.x, mousePosition.y, 0)
-        );
-
-        Vector3Int cell = gridManager.groundTilemap.WorldToCell(
-            worldPosition
-        );
-
+        if (mainCamera == null || gridManager == null || gridManager.groundTilemap == null || Mouse.current == null) return false;
+        Vector2 mouse = Mouse.current.position.ReadValue();
+        Vector3 world = mainCamera.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, 0f));
+        Vector3Int cell = gridManager.groundTilemap.WorldToCell(world);
         position = new Vector2Int(cell.x, -cell.y);
-
-        return position.x >= 0 && position.x < gridManager.width &&
-               position.y >= 0 && position.y < gridManager.height;
+        return position.x >= 0 && position.x < gridManager.width && position.y >= 0 && position.y < gridManager.height;
     }
 
+    /// <summary>Called by the scene button. Validation happens before the board is frozen.</summary>
     public void LockBoard()
     {
-        if (campaignState.IsBoardLocked)
-        {
-            Debug.LogWarning("Board is already locked.");
-            return;
-        }
-
-        if (levelGenerator == null ||
-            levelGenerator.CurrentLevel == null)
-        {
-            Debug.LogError("Cannot lock board: Current level is missing!");
-            return;
-        }
-
-        // Create the snapshot before locking the board.
-        LockedLevelSnapshot = LevelSnapshotFactory.CreateSnapshot(
-            levelGenerator.CurrentLevel
-        );
-
-        if (LockedLevelSnapshot == null)
-        {
-            Debug.LogError("Cannot lock board: Snapshot creation failed!");
-            return;
-        }
-
-        if (campaignState.LockBoard())
-        {
-            placementEnabled = false;
-
-            Debug.Log("Board locked successfully.");
-            Debug.Log("Final level snapshot created.");
-        }
+        if (_flow == null) _flow = GetComponent<GameFlowController>() ?? gameObject.AddComponent<GameFlowController>();
+        _flow.TryLockAndRun();
     }
 
-    public void ResetBoard()
+    public bool TrySetLocked(bool locked)
     {
-        campaignState.ResetBoard();
+        if (locked)
+        {
+            if (!placementState.LockBoard()) return false;
+            placementEnabled = false;
+            return true;
+        }
+        placementState.ResetBoard();
         placementEnabled = true;
-        LockedLevelSnapshot = null;
+        return true;
+    }
+
+    public void ResetForNextLevel()
+    {
+        TrySetLocked(false);
+    }
+
+    private void NotifyInventoryChanged()
+    {
+        if (_flow != null) _flow.NotifyInventoryChanged();
     }
 }

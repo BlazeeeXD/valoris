@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 71dbf373b48eee544bcea100abc7e448, type: 3}
   m_Name: MudItem
-  m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
+  m_EditorClassIdentifier: Valoris.Game::ItemDefinition
   itemName: Mud
   icon: {fileID: 0}
   cellType: 3
